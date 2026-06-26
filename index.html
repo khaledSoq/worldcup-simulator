@@ -464,18 +464,19 @@ function setDataBadge() {
   }
 }
 
-// Build id→{name,flag} from /get/teams array; always use emoji flags
+// Build id→{name,flag} from /get/teams array
+// flag is a validated flagcdn URL when available, emoji otherwise
 function buildTeamMap(teamsArr) {
   const map = {};
-  // seed with emoji fallback for all 48 teams
   Object.entries(WC26_TEAMS_FALLBACK).forEach(([id,[name,flag]]) => {
     map[id] = { name, flag };
   });
-  // override names only from live data (keep emoji flags)
   (teamsArr || []).forEach(t => {
     const id   = String(t.id ?? '');
     const name = String(t.name_en ?? t.name ?? '');
-    if (id && name && map[id]) map[id] = { name, flag: map[id].flag };
+    const flag = (typeof t.flag === 'string' && LOGO_URL_RE.test(t.flag))
+      ? t.flag : (map[id]?.flag ?? '⚽');
+    if (id && name) map[id] = { name, flag };
   });
   return map;
 }
@@ -529,7 +530,16 @@ async function fetchLiveStandings() {
   renderGroups();
 }
 
-function groupById(letter) { return groups.find(g => g.id === letter); }
+// flagHtml — safe HTML string for innerHTML contexts (bracket slots, picker)
+// URL → <img>; emoji → plain text span (no XSS risk from LOGO_URL_RE-validated URLs)
+function flagHtml(flag) {
+  if (typeof flag === 'string' && LOGO_URL_RE.test(flag))
+    return `<img src="${flag}" alt="" referrerpolicy="no-referrer" `+
+           `style="width:1.1rem;height:0.85rem;object-fit:cover;`+
+           `display:inline-block;vertical-align:middle;border-radius:1px">`;
+  const safe = String(flag ?? '⚽').replace(/[<>&"]/g, '');
+  return safe;
+}
 function teamAt(letter, pos) { const g = groupById(letter); return g ? g.teams[pos - 1] : null; }
 
 // ============================================================
@@ -818,7 +828,7 @@ function slotEl(match, round, idx, side) {
   if (isReal(data)) {
     el.className = 'slot team-slot';
     if (match.winner && sameTeam(match.winner, data)) el.classList.add('winner');
-    el.innerHTML = `<span class="flag-sm">${data.flag}</span>` +
+    el.innerHTML = `<span class="flag-sm">${flagHtml(data.flag)}</span>` +
                    `<span class="name-sm">${data.name}</span>` +
                    (data.seed ? `<span class="seed">${data.seed}</span>` : '');
     el.dataset.team = JSON.stringify(data);
@@ -941,7 +951,7 @@ function renderThirdOptions() {
     const opt = document.createElement('div');
     opt.className = 'third-option' + (selectedThird.has(gi) ? ' selected' : '');
     opt.innerHTML =
-      `<span class="flag-sm">${third.flag}</span>` +
+      `<span class="flag-sm">${flagHtml(third.flag)}</span>` +
       `<span class="tname">${third.name}</span>` +
       `<span class="grp">3${g.id}</span>` +
       `<span class="check">${selectedThird.has(gi) ? '✓' : ''}</span>`;
