@@ -2,7 +2,6 @@ name: Daily Standings Update
 
 on:
   schedule:
-    # 06:00 UTC = 09:00 Saudi Arabia Standard Time (AST, UTC+3)
     - cron: '0 6 * * *'
   workflow_dispatch:
 
@@ -24,17 +23,15 @@ jobs:
           curl --fail --silent --show-error \
             --url 'https://site.api.espn.com/apis/v2/sports/soccer/fifa.world/standings' \
             -o standings.raw.json
-          echo "Fetch succeeded. Groups found:"
           jq '.children | length' standings.raw.json
 
       - name: Validate response shape
         run: |
           COUNT=$(jq '.children | length' standings.raw.json 2>/dev/null || echo 0)
           if [ "$COUNT" -lt 1 ]; then
-            echo "No groups in response — aborting."
+            echo "No groups — aborting."
             exit 1
           fi
-          echo "Valid: $COUNT groups"
 
       - name: Stamp timestamp and write standings.json
         run: |
@@ -49,7 +46,7 @@ jobs:
           git pull origin main --rebase --autostash
           git add standings.json
           if git diff --cached --quiet; then
-            echo "No changes — skipping push."
+            echo "No changes — skipping."
             exit 0
           fi
           git commit -m "Data sync $(TZ='Asia/Riyadh' date '+%Y-%m-%d %H:%M AST')"
