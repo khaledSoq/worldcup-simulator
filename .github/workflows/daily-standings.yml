@@ -48,4 +48,5 @@ jobs:
           git add standings.json
           git diff --cached --quiet && echo "No changes, skipping commit." || \
             git commit -m "Data sync: standings update $(TZ='Asia/Riyadh' date '+%Y-%m-%d %H:%M AST')"
+          git pull --rebase origin main
           git push
