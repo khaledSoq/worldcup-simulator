@@ -390,7 +390,8 @@ initData();
 //  - validated api-sports logo URL -> <img>
 //  - anything else -> ⚽ fallback (prevents XSS via innerHTML)
 // ============================================================
-const LOGO_URL_RE = /^https:\/\/media\.api-sports\.io\/football\/teams\/\d+\.png$/;
+// Accept flagcdn.com flag images and ESPN/api-sports logos
+const LOGO_URL_RE = /^https:\/\/(flagcdn\.com\/w\d+\/[\w-]+\.png|a\.(espncdn|espn)\.com\/i\/teamlogos\/soccer\/500\/\S+\.png|media\.api-sports\.io\/football\/teams\/\d+\.png)$/i;
 function applyFlag(el, flag) {
   el.textContent = '';
   if (typeof flag === 'string' && LOGO_URL_RE.test(flag)) {
@@ -408,10 +409,46 @@ function applyFlag(el, flag) {
 }
 
 // ============================================================
-//  LIVE STANDINGS ENGINE (reads static ./standings.json built
-//  by the daily GitHub Action — zero API calls per visitor)
+//  worldcup26.ir TEAM ID MAP
+//  Built at runtime from the merged standings.json which includes
+//  both /get/teams (names + flag URLs) and /get/groups (standings).
+//  This static fallback is used only if teams data is missing.
 // ============================================================
-let dataSource = 'baseline';   // 'live' | 'baseline'
+const WC26_TEAMS_FALLBACK = {
+  "1":["Mexico","🇲🇽"],          "2":["South Africa","🇿🇦"],
+  "3":["South Korea","🇰🇷"],     "4":["Czechia","🇨🇿"],
+  "5":["Canada","🇨🇦"],          "6":["Bosnia and Herzegovina","🇧🇦"],
+  "7":["Qatar","🇶🇦"],           "8":["Switzerland","🇨🇭"],
+  "9":["Brazil","🇧🇷"],          "10":["Morocco","🇲🇦"],
+  "11":["Haiti","🇭🇹"],           "12":["Scotland","🏴󠁧󠁢󠁳󠁣󠁴󠁿"],
+  "13":["United States","🇺🇸"],  "14":["Paraguay","🇵🇾"],
+  "15":["Australia","🇦🇺"],      "16":["Türkiye","🇹🇷"],
+  "17":["Germany","🇩🇪"],        "18":["Curaçao","🇨🇼"],
+  "19":["Ivory Coast","🇨🇮"],    "20":["Ecuador","🇪🇨"],
+  "21":["Netherlands","🇳🇱"],    "22":["Japan","🇯🇵"],
+  "23":["Sweden","🇸🇪"],         "24":["Tunisia","🇹🇳"],
+  "25":["Belgium","🇧🇪"],        "26":["Egypt","🇪🇬"],
+  "27":["Iran","🇮🇷"],           "28":["New Zealand","🇳🇿"],
+  "29":["Spain","🇪🇸"],          "30":["Cabo Verde","🇨🇻"],
+  "31":["Saudi Arabia","🇸🇦"],   "32":["Uruguay","🇺🇾"],
+  "33":["France","🇫🇷"],         "34":["Senegal","🇸🇳"],
+  "35":["Iraq","🇮🇶"],           "36":["Norway","🇳🇴"],
+  "37":["Argentina","🇦🇷"],      "38":["Algeria","🇩🇿"],
+  "39":["Austria","🇦🇹"],        "40":["Jordan","🇯🇴"],
+  "41":["Portugal","🇵🇹"],       "42":["DR Congo","🇨🇩"],
+  "43":["Uzbekistan","🇺🇿"],     "44":["Colombia","🇨🇴"],
+  "45":["England","🏴󠁧󠁢󠁥󠁮󠁧󠁿"],   "46":["Croatia","🇭🇷"],
+  "47":["Ghana","🇬🇭"],          "48":["Panama","🇵🇦"]
+};
+
+// ============================================================
+//  LIVE STANDINGS ENGINE
+//  Reads ./standings.json — merged output of:
+//    GET worldcup26.ir/get/teams  → { teams: [...] }
+//    GET worldcup26.ir/get/groups → { groups: [...] }
+//  Combined into: { teams:[...], groups:[...], lastUpdated:"..." }
+// ============================================================
+let dataSource = 'baseline';
 let lastUpdated = null;
 
 function setDataBadge() {
@@ -420,48 +457,60 @@ function setDataBadge() {
   if (dataSource === 'live') {
     const when = lastUpdated ? ` · updated ${lastUpdated}` : '';
     badge.innerHTML = `<span style="color:#22c55e">●</span> Live standings${when}`;
-    badge.title = 'Loaded from standings.json';
+    badge.title = 'Live data from worldcup26.ir';
   } else {
     badge.innerHTML = `<span style="color:#fbbf24">●</span> Baseline data`;
-    badge.title = 'Using built-in fallback order (live file unavailable)';
+    badge.title = 'Using built-in fallback order';
   }
 }
 
-// Parse the api-football standings payload into our groups shape.
-// Returns an array of groups or throws if the shape is unusable.
-function parseStandingsPayload(data) {
-  if (!data || !Array.isArray(data.response) || data.response.length === 0)
-    throw new Error('empty response');
-  const standings = data.response[0]?.league?.standings;
-  if (!Array.isArray(standings) || standings.length === 0)
-    throw new Error('no standings array');
-
-  const parsed = standings.map((groupArray) => {
-    if (!Array.isArray(groupArray) || groupArray.length === 0)
-      throw new Error('bad group array');
-    const rawGroup = String(groupArray[0].group || '').replace(/^Group\s*/i, '').trim();
-    if (!rawGroup) throw new Error('missing group label');
-    const teams = groupArray
-      .slice()
-      .sort((a, b) => (a.rank || 0) - (b.rank || 0))
-      .map((t, i) => {
-        const logo = t?.team?.logo;
-        return {
-          name: String(t?.team?.name ?? 'Unknown'),
-          flag: (typeof logo === 'string' && LOGO_URL_RE.test(logo)) ? logo : '⚽',
-          group: rawGroup,
-          position: t.rank || (i + 1),
-          points: (typeof t.points === 'number') ? t.points : null,
-          gd: (typeof t.goalsDiff === 'number') ? t.goalsDiff : null,
-          gf: (typeof t?.all?.goals?.for === 'number') ? t.all.goals.for : null
-        };
-      });
-    return { id: rawGroup, teams };
+// Build id→{name,flag} from /get/teams array; fall back to emoji map
+function buildTeamMap(teamsArr) {
+  const map = {};
+  // seed with emoji fallback first
+  Object.entries(WC26_TEAMS_FALLBACK).forEach(([id,[name,flag]]) => {
+    map[id] = { name, flag };
   });
+  // override with real data (flag URLs) where available
+  (teamsArr || []).forEach(t => {
+    const id   = String(t.id ?? '');
+    const name = String(t.name_en ?? t.name ?? '');
+    const flag = (typeof t.flag === 'string' && LOGO_URL_RE.test(t.flag))
+      ? t.flag : (map[id]?.flag ?? '⚽');
+    if (id && name) map[id] = { name, flag };
+  });
+  return map;
+}
 
-  parsed.sort((a, b) => a.id.localeCompare(b.id));
-  if (parsed.length === 0) throw new Error('no groups parsed');
-  return parsed;
+function parseStandingsPayload(data) {
+  const raw = data?.groups;
+  if (!Array.isArray(raw) || raw.length === 0)
+    throw new Error('no groups array');
+
+  const teamMap = buildTeamMap(data?.teams ?? []);
+
+  return raw.map(grp => {
+    const groupId = String(grp?.name || '').trim().toUpperCase();
+    if (!groupId) throw new Error('missing group name');
+    const entries = grp?.teams;
+    if (!Array.isArray(entries) || entries.length === 0)
+      throw new Error(`no teams for group ${groupId}`);
+
+    const teams = entries.map((e, i) => {
+      const id   = String(e.team_id ?? '');
+      const info = teamMap[id] ?? { name: `Team ${id}`, flag: '⚽' };
+      return {
+        name:     info.name,
+        flag:     info.flag,
+        group:    groupId,
+        position: i + 1,
+        points:   Number(e.pts) || 0,
+        gd:       Number(e.gd)  || 0,
+        gf:       Number(e.gf)  || 0
+      };
+    });
+    return { id: groupId, teams };
+  }).sort((a, b) => a.id.localeCompare(b.id));
 }
 
 async function fetchLiveStandings() {
@@ -470,15 +519,12 @@ async function fetchLiveStandings() {
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
     const parsed = parseStandingsPayload(data);
-
     groups = parsed;
     dataSource = 'live';
-    // optional freshness timestamp if the workflow writes one
-    lastUpdated = (data.lastUpdated && typeof data.lastUpdated === 'string')
-      ? data.lastUpdated : null;
+    lastUpdated = (typeof data.lastUpdated === 'string') ? data.lastUpdated : null;
   } catch (err) {
     console.warn('Live standings unavailable, using baseline:', err.message);
-    initData();                 // hardcoded fallback
+    initData();
     dataSource = 'baseline';
   }
   setDataBadge();
