@@ -4,7 +4,7 @@ on:
   schedule:
     # 06:00 UTC = 09:00 Saudi Arabia Standard Time (AST, UTC+3)
     - cron: '0 6 * * *'
-  workflow_dispatch:      # manual trigger from the Actions tab
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -15,42 +15,42 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
 
-      - name: Fetch live standings from ESPN (no API key needed)
+      - name: Fetch live standings from ESPN
         run: |
           curl --fail --silent --show-error \
             --url 'https://site.api.espn.com/apis/v2/sports/soccer/fifa.world/standings' \
             -o standings.raw.json
-          echo "✅ Fetch succeeded. First 60 lines of response:"
-          head -60 standings.raw.json
+          echo "Fetch succeeded. Groups found:"
+          jq '.children | length' standings.raw.json
 
-      - name: Validate shape (must have children array with groups)
+      - name: Validate response shape
         run: |
           COUNT=$(jq '.children | length' standings.raw.json 2>/dev/null || echo 0)
-          echo "Groups found in response: $COUNT"
           if [ "$COUNT" -lt 1 ]; then
-            echo "❌ No children/groups in response — aborting to preserve last good file."
+            echo "No groups in response — aborting."
             exit 1
           fi
-          echo "✅ Shape valid. Proceeding."
+          echo "Valid: $COUNT groups"
 
-      - name: Stamp last-updated time (AST) and finalize file
+      - name: Stamp timestamp and write standings.json
         run: |
           STAMP="$(TZ='Asia/Riyadh' date '+%Y-%m-%d %H:%M AST')"
           jq --arg s "$STAMP" '. + {lastUpdated: $s}' standings.raw.json > standings.json
-          rm -f standings.raw.json
-          echo "Stamped: $STAMP"
+          rm standings.raw.json
 
-      - name: Commit and push if changed
+      - name: Push to remote
         run: |
-          git config --global user.name  'github-actions[bot]'
-          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git config user.name  'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git pull origin main --rebase --autostash
           git add standings.json
           if git diff --cached --quiet; then
-            echo "No changes to standings.json, skipping."
+            echo "No changes — skipping push."
             exit 0
           fi
-          git commit -m "Data sync: standings update $(TZ='Asia/Riyadh' date '+%Y-%m-%d %H:%M AST')"
-          git fetch origin main
-          git rebase origin/main
+          git commit -m "Data sync $(TZ='Asia/Riyadh' date '+%Y-%m-%d %H:%M AST')"
           git push origin main
