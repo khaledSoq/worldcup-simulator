@@ -2,7 +2,7 @@ name: Daily Standings Update
 
 on:
   schedule:
-    - cron: '0 6 * * *'
+    - cron: '0 6 * * *'   # 06:00 UTC = 09:00 AST (Saudi Arabia)
   workflow_dispatch:
 
 permissions:
@@ -17,37 +17,57 @@ jobs:
         with:
           ref: main
           fetch-depth: 0
+          persist-credentials: true
 
-      - name: Fetch live standings from ESPN
+      - name: Fetch teams from worldcup26.ir
         run: |
-          curl --fail --silent --show-error \
-            --url 'https://site.api.espn.com/apis/v2/sports/soccer/fifa.world/standings' \
-            -o standings.raw.json
-          jq '.children | length' standings.raw.json
-
-      - name: Validate response shape
-        run: |
-          COUNT=$(jq '.children | length' standings.raw.json 2>/dev/null || echo 0)
-          if [ "$COUNT" -lt 1 ]; then
-            echo "No groups — aborting."
+          HTTP=$(curl --silent --write-out "%{http_code}" \
+            --url 'https://worldcup26.ir/get/teams' \
+            -o teams.json)
+          echo "Teams HTTP: $HTTP"
+          COUNT=$(jq '.teams | length' teams.json 2>/dev/null || echo 0)
+          echo "Teams count: $COUNT"
+          if [ "$COUNT" -lt 48 ]; then
+            echo "❌ Expected 48 teams, got $COUNT — aborting."
             exit 1
           fi
 
-      - name: Stamp timestamp and write standings.json
+      - name: Fetch groups from worldcup26.ir
+        run: |
+          HTTP=$(curl --silent --write-out "%{http_code}" \
+            --url 'https://worldcup26.ir/get/groups' \
+            -o groups.json)
+          echo "Groups HTTP: $HTTP"
+          COUNT=$(jq '.groups | length' groups.json 2>/dev/null || echo 0)
+          echo "Groups count: $COUNT"
+          if [ "$COUNT" -lt 12 ]; then
+            echo "❌ Expected 12 groups, got $COUNT — aborting."
+            exit 1
+          fi
+
+      - name: Merge and stamp standings.json
         run: |
           STAMP="$(TZ='Asia/Riyadh' date '+%Y-%m-%d %H:%M AST')"
-          jq --arg s "$STAMP" '. + {lastUpdated: $s}' standings.raw.json > standings.json
-          rm standings.raw.json
+          jq -n \
+            --slurpfile t teams.json \
+            --slurpfile g groups.json \
+            --arg s "$STAMP" \
+            '{teams: $t[0].teams, groups: $g[0].groups, lastUpdated: $s}' \
+            > standings.json
+          echo "✅ standings.json written — stamp: $STAMP"
+          jq '{groups: (.groups | length), teams: (.teams | length), lastUpdated}' standings.json
+          rm teams.json groups.json
 
-      - name: Push to remote
+      - name: Commit and push
         run: |
           git config user.name  'github-actions[bot]'
           git config user.email 'github-actions[bot]@users.noreply.github.com'
-          git pull origin main --rebase --autostash
+          git fetch origin main
+          git reset --soft origin/main
           git add standings.json
           if git diff --cached --quiet; then
             echo "No changes — skipping."
             exit 0
           fi
           git commit -m "Data sync $(TZ='Asia/Riyadh' date '+%Y-%m-%d %H:%M AST')"
-          git push origin main
+          git push --force-with-lease origin main
