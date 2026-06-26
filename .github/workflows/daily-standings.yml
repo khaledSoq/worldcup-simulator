@@ -4,7 +4,7 @@ on:
   schedule:
     # 06:00 UTC = 09:00 Saudi Arabia Standard Time (AST, UTC+3)
     - cron: '0 6 * * *'
-  workflow_dispatch:        # manual trigger from the Actions tab
+  workflow_dispatch:      # manual trigger from the Actions tab
 
 permissions:
   contents: write
@@ -16,26 +16,36 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Fetch live standings from API-Football
+      - name: Fetch live standings from ESPN (no API key needed)
         run: |
           curl --fail --silent --show-error \
-            --request GET \
-            --url 'https://v3.football.api-sports.io/standings?league=1&season=2026' \
-            --header "x-apisports-key: ${{ secrets.APISPORTS_KEY }}" \
+            --url 'https://site.api.espn.com/apis/v2/sports/soccer/fifa.world/standings' \
             -o standings.raw.json
+          echo "✅ Fetch succeeded. First 60 lines of response:"
+          head -60 standings.raw.json
+
+      - name: Validate shape (must have children array with groups)
+        run: |
+          COUNT=$(jq '.children | length' standings.raw.json 2>/dev/null || echo 0)
+          echo "Groups found in response: $COUNT"
+          if [ "$COUNT" -lt 1 ]; then
+            echo "❌ No children/groups in response — aborting to preserve last good file."
+            exit 1
+          fi
+          echo "✅ Shape valid. Proceeding."
 
       - name: Stamp last-updated time (AST) and finalize file
         run: |
-          # add a human-readable lastUpdated field the site can display
           STAMP="$(TZ='Asia/Riyadh' date '+%Y-%m-%d %H:%M AST')"
-          # merge the stamp into the JSON payload using jq (preinstalled on ubuntu runners)
           jq --arg s "$STAMP" '. + {lastUpdated: $s}' standings.raw.json > standings.json
           rm -f standings.raw.json
+          echo "Stamped: $STAMP"
 
       - name: Commit and push if changed
         run: |
           git config --global user.name  'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
           git add standings.json
-          git commit -m "Automated data sync: daily standings update" || exit 0
+          git diff --cached --quiet && echo "No changes, skipping commit." || \
+            git commit -m "Data sync: standings update $(TZ='Asia/Riyadh' date '+%Y-%m-%d %H:%M AST')"
           git push
