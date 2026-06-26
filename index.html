@@ -464,20 +464,18 @@ function setDataBadge() {
   }
 }
 
-// Build id→{name,flag} from /get/teams array; fall back to emoji map
+// Build id→{name,flag} from /get/teams array; always use emoji flags
 function buildTeamMap(teamsArr) {
   const map = {};
-  // seed with emoji fallback first
+  // seed with emoji fallback for all 48 teams
   Object.entries(WC26_TEAMS_FALLBACK).forEach(([id,[name,flag]]) => {
     map[id] = { name, flag };
   });
-  // override with real data (flag URLs) where available
+  // override names only from live data (keep emoji flags)
   (teamsArr || []).forEach(t => {
     const id   = String(t.id ?? '');
     const name = String(t.name_en ?? t.name ?? '');
-    const flag = (typeof t.flag === 'string' && LOGO_URL_RE.test(t.flag))
-      ? t.flag : (map[id]?.flag ?? '⚽');
-    if (id && name) map[id] = { name, flag };
+    if (id && name && map[id]) map[id] = { name, flag: map[id].flag };
   });
   return map;
 }
