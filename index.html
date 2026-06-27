@@ -1268,14 +1268,14 @@ const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsIn
 const sbHeaders = {
   'Content-Type':  'application/json',
   'apikey':        SB_ANON,
-  'Authorization': 'Bearer ' + SB_ANON,
-  'Prefer':        'return=minimal'
+  'Authorization': 'Bearer ' + SB_ANON
 };
 
 async function sbFetch(path, opts = {}) {
+  const { headers: extraHeaders, ...restOpts } = opts;
   const res = await fetch(SB_URL + '/rest/v1/' + path, {
-    headers: { ...sbHeaders, ...(opts.headers || {}) },
-    ...opts
+    headers: { ...sbHeaders, ...(extraHeaders || {}) },
+    ...restOpts
   });
   return res;
 }
