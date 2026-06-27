@@ -2,7 +2,8 @@ name: Daily Standings Update
 
 on:
   schedule:
-    - cron: '0 6 * * *'   # 06:00 UTC = 09:00 AST (Saudi Arabia)
+    - cron: '0 22 * * *'   # 01:00 AM KSA (UTC+3)
+    - cron: '0 6 * * *'    # 09:00 AM KSA (UTC+3)
   workflow_dispatch:
 
 permissions:
@@ -45,18 +46,32 @@ jobs:
             exit 1
           fi
 
+      - name: Fetch games from worldcup26.ir
+        run: |
+          HTTP=$(curl --silent --write-out "%{http_code}" \
+            --url 'https://worldcup26.ir/get/games' \
+            -o games.json)
+          echo "Games HTTP: $HTTP"
+          COUNT=$(jq '.games | length' games.json 2>/dev/null || echo 0)
+          echo "Games count: $COUNT"
+          if [ "$COUNT" -lt 1 ]; then
+            echo "❌ No games returned — aborting."
+            exit 1
+          fi
+
       - name: Merge and stamp standings.json
         run: |
           STAMP="$(TZ='Asia/Riyadh' date '+%Y-%m-%d %H:%M AST')"
           jq -n \
             --slurpfile t teams.json \
             --slurpfile g groups.json \
+            --slurpfile m games.json \
             --arg s "$STAMP" \
-            '{teams: $t[0].teams, groups: $g[0].groups, lastUpdated: $s}' \
+            '{teams: $t[0].teams, groups: $g[0].groups, games: $m[0].games, lastUpdated: $s}' \
             > standings.json
           echo "✅ standings.json written — stamp: $STAMP"
-          jq '{groups: (.groups | length), teams: (.teams | length), lastUpdated}' standings.json
-          rm teams.json groups.json
+          jq '{groups: (.groups|length), teams: (.teams|length), games: (.games|length), lastUpdated}' standings.json
+          rm teams.json groups.json games.json
 
       - name: Commit and push
         run: |
