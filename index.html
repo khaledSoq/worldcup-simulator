@@ -219,6 +219,63 @@
     .slot .name-sm { font-size: .52rem; }
     .slot .flag-sm { font-size: .8rem; }
   }
+
+  /* ---- Supabase modals ---- */
+  .sb-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(12,15,20,.92); backdrop-filter: blur(8px);
+    z-index: 200; align-items: center; justify-content: center;
+    padding: 1.25rem; animation: fadeIn .25s ease;
+  }
+  .sb-overlay.active { display: flex; }
+  .sb-panel {
+    background: #141b24; border: 1px solid #2a3346; border-radius: 18px;
+    padding: 1.5rem; width: 100%; max-width: 480px;
+    max-height: 88vh; overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0,0,0,.7);
+  }
+  .sb-panel h2 { font-size: 1.1rem; font-weight: 800; color: #fff; margin: 0 0 .5rem; }
+  .sb-panel .sub { color: #94a3b8; font-size: .8rem; margin: 0 0 1rem; }
+  .sb-input {
+    width: 100%; background: #0f1620; border: 1px solid #2a3346; border-radius: 10px;
+    color: #e2e8f0; font-size: .95rem; padding: .6rem .85rem; outline: none;
+    transition: border-color .2s; margin-bottom: .75rem;
+  }
+  .sb-input:focus { border-color: #3b82f6; }
+  .sb-actions { display: flex; gap: .5rem; flex-wrap: wrap; justify-content: flex-end; }
+  .btn-green {
+    background: #22c55e; color: #0c0f14; font-weight: 700;
+    padding: .55rem 1.25rem; border-radius: 40px; border: none; cursor: pointer;
+    transition: opacity .15s;
+  }
+  .btn-green:hover { opacity: .88; }
+  .btn-green:disabled { opacity: .45; cursor: not-allowed; }
+  .sb-status { font-size: .78rem; margin-top: .6rem; min-height: 1.1rem; }
+  .sb-status.ok  { color: #22c55e; }
+  .sb-status.err { color: #f87171; }
+  .sb-status.loading { color: #60a5fa; }
+
+  /* predictions list */
+  .pred-list { display: flex; flex-direction: column; gap: .45rem; margin-top: .75rem; }
+  .pred-card {
+    background: #1a222e; border: 1px solid #2a3346; border-radius: 10px;
+    padding: .6rem .85rem; cursor: pointer;
+    transition: background .15s, border-color .15s;
+    display: flex; align-items: center; justify-content: space-between; gap: .5rem;
+  }
+  .pred-card:hover { background: #222d3d; border-color: #3b82f6; }
+  .pred-card .pname { font-weight: 700; font-size: .9rem; color: #e2e8f0; }
+  .pred-card .pmeta { font-size: .68rem; color: #64748b; margin-top: .1rem; }
+  .pred-card .pchamp { font-size: .78rem; color: #fbbf24; }
+  .pred-empty { text-align: center; color: #475569; padding: 1.5rem 0; font-size: .85rem; }
+  .pred-loading { text-align: center; color: #60a5fa; padding: 1rem 0; font-size: .85rem;
+                  animation: pulse 1.2s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.45} }
+  .readonly-badge {
+    display: inline-block; background: #1e2a3a; border: 1px solid #3b82f6;
+    color: #60a5fa; font-size: .65rem; font-weight: 700; letter-spacing: .06em;
+    padding: .15rem .5rem; border-radius: 20px; margin-left: .5rem; vertical-align: middle;
+  }
 </style>
 </head>
 <body>
@@ -234,9 +291,12 @@
           <p class="text-gray-400 text-xs sm:text-sm mt-0.5">Drag teams within each group to set the final standings, then lock the bracket</p>
           <div id="dataBadge" class="text-[0.7rem] mt-1 text-gray-400" style="letter-spacing:.02em"></div>
         </div>
-        <button id="generateBracketBtn" class="btn-gold text-sm sm:text-base">
-          🔒 Lock Groups &amp; Generate Bracket
-        </button>
+        <div class="flex gap-2 flex-wrap items-center justify-center sm:justify-end">
+          <button id="viewPredictionsBtn" class="btn-outline text-sm">📋 Predictions</button>
+          <button id="generateBracketBtn" class="btn-gold text-sm sm:text-base">
+            🔒 Lock Groups &amp; Generate Bracket
+          </button>
+        </div>
       </header>
 
       <div id="groupsContainer" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 sm:gap-4"></div>
@@ -250,6 +310,7 @@
         <span>🏆</span> Knockout <span class="text-blue-400">Bracket</span>
       </h2>
       <div class="flex gap-2 flex-wrap">
+        <button id="savePredictionBtn" class="btn-green text-xs sm:text-sm">💾 Save Prediction</button>
         <button id="resetBracketBtn" class="btn-danger-outline text-xs sm:text-sm">🔄 Reset Bracket</button>
         <button id="backToGroupsBtn" class="btn-outline text-xs sm:text-sm">← Back to Groups</button>
       </div>
@@ -265,6 +326,34 @@
       <span class="trophy">🏆</span>
       <div class="champ-name" id="champName">—</div>
       <div class="champ-sub">🏅 2026 FIFA World Cup Champion</div>
+    </div>
+  </div>
+
+  <!-- ============ SAVE PREDICTION MODAL ============ -->
+  <div id="save-overlay" class="sb-overlay">
+    <div class="sb-panel">
+      <h2>💾 Save Your Prediction</h2>
+      <p class="sub">Give this bracket a name. If the name already exists a number will be added automatically.</p>
+      <input id="predNameInput" class="sb-input" type="text" placeholder="e.g. Khaled, My Prediction…" maxlength="40" />
+      <div class="sb-actions">
+        <button id="cancelSaveBtn" class="btn-outline text-sm">Cancel</button>
+        <button id="confirmSaveBtn" class="btn-green">Save</button>
+      </div>
+      <div id="saveStatus" class="sb-status"></div>
+    </div>
+  </div>
+
+  <!-- ============ VIEW PREDICTIONS MODAL ============ -->
+  <div id="view-overlay" class="sb-overlay">
+    <div class="sb-panel" style="max-width:560px">
+      <h2>📋 All Predictions</h2>
+      <p class="sub">Tap a prediction to view it. Everyone's picks are shown here.</p>
+      <div id="predList" class="pred-list">
+        <div class="pred-loading">Loading…</div>
+      </div>
+      <div class="sb-actions" style="margin-top:1rem">
+        <button id="closeViewBtn" class="btn-outline text-sm">Close</button>
+      </div>
     </div>
   </div>
 
@@ -525,10 +614,11 @@ function parseStandingsPayload(data) {
 }
 
 async function fetchLiveStandings() {
+  let data = null;
   try {
     const res = await fetch('./standings.json', { cache: 'no-store' });
     if (!res.ok) throw new Error('HTTP ' + res.status);
-    const data = await res.json();
+    data = await res.json();
     const parsed = parseStandingsPayload(data);
     groups = parsed;
     dataSource = 'live';
@@ -539,8 +629,147 @@ async function fetchLiveStandings() {
     dataSource = 'baseline';
   }
   setDataBadge();
-  renderGroups();
+
+  // Parse games and decide whether to skip group stage
+  const gamesArr = data?.games ?? [];
+  const autoState = gamesArr.length ? buildBracketFromGames(gamesArr, buildTeamMap(data?.teams ?? [])) : null;
+  if (autoState) {
+    // Knockout has started — skip straight to bracket
+    bracketState = autoState.state;
+    document.getElementById('group-stage').style.display = 'none';
+    document.getElementById('bracket-view').style.display = 'block';
+    // update Lock Groups button for when user goes back
+    const lockBtn = document.getElementById('generateBracketBtn');
+    if (lockBtn) lockBtn.textContent = '🏆 View Live Bracket';
+    // update subtitle
+    const sub = document.querySelector('#group-stage header p');
+    if (sub) sub.textContent = 'Knockout stage is underway — standings are locked.';
+    // show stage badge
+    const badge = document.getElementById('dataBadge');
+    if (badge) {
+      const stageLabel = { r32:'Round of 32', r16:'Round of 16', qf:'Quarter-Finals', sf:'Semi-Finals', final:'Final' };
+      const when = lastUpdated ? ` · ${lastUpdated}` : '';
+      badge.innerHTML = `<span style="color:#22c55e">●</span> ${stageLabel[autoState.stage] || 'Knockout'} in progress${when}`;
+    }
+    renderBracket();
+  } else {
+    renderGroups();
+  }
   dataReady = true;
+}
+
+// ============================================================
+//  AUTO-BRACKET FROM GAMES
+//  Reads the /get/games payload and builds bracketState directly.
+//  API game id === our FIFA match number (73-104).
+// ============================================================
+const MATCH_TO_SLOT = {
+  73:{round:'r32',idx:2},  74:{round:'r32',idx:0},  75:{round:'r32',idx:3},
+  76:{round:'r32',idx:8},  77:{round:'r32',idx:1},  78:{round:'r32',idx:9},
+  79:{round:'r32',idx:10}, 80:{round:'r32',idx:11}, 81:{round:'r32',idx:6},
+  82:{round:'r32',idx:7},  83:{round:'r32',idx:4},  84:{round:'r32',idx:5},
+  85:{round:'r32',idx:14}, 86:{round:'r32',idx:12}, 87:{round:'r32',idx:15},
+  88:{round:'r32',idx:13},
+  89:{round:'r16',idx:0},  90:{round:'r16',idx:1},  91:{round:'r16',idx:4},
+  92:{round:'r16',idx:5},  93:{round:'r16',idx:2},  94:{round:'r16',idx:3},
+  95:{round:'r16',idx:6},  96:{round:'r16',idx:7},
+  97:{round:'qf',idx:0},   98:{round:'qf',idx:1},
+  99:{round:'qf',idx:2},   100:{round:'qf',idx:3},
+  101:{round:'sf',idx:0},  102:{round:'sf',idx:1},
+  103:{round:'third',idx:0}, 104:{round:'final',idx:0}
+};
+
+function buildBracketFromGames(gamesArr, teamMap) {
+  // Only activate when at least one knockout game exists
+  const knockoutGames = gamesArr.filter(g => g.type && g.type !== 'group');
+  if (knockoutGames.length === 0) return null;
+
+  // Determine current stage
+  const stageOrder = ['r32','r16','qf','sf','final'];
+  let topStage = 'r32';
+  knockoutGames.forEach(g => {
+    const t = g.type === 'third' ? 'sf' : g.type;
+    if (stageOrder.indexOf(t) > stageOrder.indexOf(topStage)) topStage = t;
+  });
+
+  // Build empty bracket structure
+  const mk = (prefix, n) => Array.from({length:n}, (_,i) => ({
+    id:`${prefix}-${i}`, home:null, away:null, winner:null
+  }));
+  const state = {
+    r32:  mk('r32',16), r16: mk('r16',8),
+    qf:   mk('qf',4),   sf:  mk('sf',2),
+    finalMatch: {id:'final',home:null,away:null,winner:null},
+    third: {id:'third',home:null,away:null,winner:null},
+    champion: null, unmatched: 0
+  };
+
+  function getMatchRef(round, idx) {
+    if (round==='r32') return state.r32[idx];
+    if (round==='r16') return state.r16[idx];
+    if (round==='qf')  return state.qf[idx];
+    if (round==='sf')  return state.sf[idx];
+    if (round==='final') return state.finalMatch;
+    if (round==='third') return state.third;
+    return null;
+  }
+
+  // resolve a team from a game row slot
+  function resolveTeam(teamId, teamNameEn, teamLabel, grp) {
+    const id = String(teamId ?? '');
+    if (id && id !== '0' && teamMap[id]) {
+      const t = teamMap[id];
+      return { name: t.name, flag: t.flag, group: grp || '', seed: '' };
+    }
+    // unknown slot — show label as placeholder
+    if (teamLabel) return { placeholder: teamLabel };
+    return null;
+  }
+
+  // Fill bracket from games
+  gamesArr.forEach(game => {
+    const matchId = parseInt(game.id);
+    const slot = MATCH_TO_SLOT[matchId];
+    if (!slot) return;
+
+    const m = getMatchRef(slot.round, slot.idx);
+    if (!m) return;
+
+    const home = resolveTeam(game.home_team_id, game.home_team_name_en, game.home_team_label, game.group);
+    const away = resolveTeam(game.away_team_id, game.away_team_name_en, game.away_team_label, game.group);
+    if (home) m.home = home;
+    if (away) m.away = away;
+
+    // Set winner for finished matches
+    if (game.finished === 'TRUE') {
+      const hs = parseInt(game.home_score);
+      const as_ = parseInt(game.away_score);
+      if (!isNaN(hs) && !isNaN(as_)) {
+        if (hs > as_) { m.winner = m.home; }
+        else if (as_ > hs) { m.winner = m.away; }
+        // draws shouldn't happen in knockout — leave winner null if equal
+      }
+      // propagate winner into next round automatically
+      if (m.winner) {
+        const next = routeNext(slot.round, slot.idx);
+        if (next) {
+          const nm = getMatchRef(next.round, next.idx);
+          if (nm) nm[next.slot] = m.winner;
+        }
+        // SF losers → 3rd place
+        if (slot.round === 'sf') {
+          const loser = isReal(m.home) && m.winner.name===m.home.name ? m.away : m.home;
+          if (isReal(loser)) {
+            if (slot.idx===0) state.third.home = loser;
+            else state.third.away = loser;
+          }
+        }
+        if (slot.round === 'final') state.champion = m.winner;
+      }
+    }
+  });
+
+  return { state, stage: topStage };
 }
 
 // flagHtml — for innerHTML contexts; emoji are safe, no escaping needed
@@ -984,6 +1213,9 @@ function generateBracket() {
   if (!dataReady) { alert('Still loading standings — please wait a moment and try again.'); return; }
   document.getElementById('group-stage').style.display = 'none';
   document.getElementById('bracket-view').style.display = 'block';
+  // If auto-bracket already built from games data, just show it
+  if (bracketState) { renderBracket(); return; }
+  // Otherwise go through the manual third-place picker
   openThirdPick();
 }
 function confirmThird() {
@@ -1003,11 +1235,17 @@ function resetBracket() {
   renderBracket();
 }
 function backToGroups() {
+  // if viewing a saved prediction, restore previous state
+  const backBtn = document.getElementById('backToGroupsBtn');
+  if (backBtn._savedRestore) { backBtn._savedRestore(); }
   document.getElementById('bracket-view').style.display = 'none';
   document.getElementById('group-stage').style.display = 'block';
   document.getElementById('champion-banner').classList.remove('show');
-  bracketState = null;
-  selectedThird.clear();
+  if (!viewingPrediction) {
+    // keep bracketState if it was auto-built from games (so Lock button re-enters it)
+    selectedThird.clear();
+  }
+  viewingPrediction = false;
   renderGroups();
 }
 
@@ -1019,6 +1257,194 @@ document.getElementById('confirmThirdBtn').addEventListener('click', confirmThir
 document.getElementById('cancelThirdBtn').addEventListener('click', closeThirdPick);
 document.getElementById('resetBracketBtn').addEventListener('click', resetBracket);
 document.getElementById('backToGroupsBtn').addEventListener('click', backToGroups);
+
+// ============================================================
+//  SUPABASE INTEGRATION
+//  Anon key is safe to expose — protected by RLS policies.
+// ============================================================
+const SB_URL  = 'https://lpnpccaicctlqivzuvdl.supabase.co';
+const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxwbnBjY2FpY2N0bHFpdnp1dmRsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI0OTE5MTcsImV4cCI6MjA5ODA2NzkxN30.5IfcFel_4ho658_cA0bLMZga87mtrvi1wXPCL1P6pEk';
+
+const sbHeaders = {
+  'Content-Type':  'application/json',
+  'apikey':        SB_ANON,
+  'Authorization': 'Bearer ' + SB_ANON,
+  'Prefer':        'return=minimal'
+};
+
+async function sbFetch(path, opts = {}) {
+  const res = await fetch(SB_URL + '/rest/v1/' + path, {
+    headers: { ...sbHeaders, ...(opts.headers || {}) },
+    ...opts
+  });
+  return res;
+}
+
+// ---- duplicate-name resolution ----
+async function resolveUniqueName(desiredName) {
+  const base = desiredName.trim() || 'My Prediction';
+  // fetch all names that start with this base
+  const res = await sbFetch(`predictions?select=profile_name&profile_name=ilike.${encodeURIComponent(base + '%')}`);
+  if (!res.ok) return base;
+  const rows = await res.json();
+  const existing = new Set(rows.map(r => r.profile_name.trim().toLowerCase()));
+  if (!existing.has(base.toLowerCase())) return base;
+  let i = 2;
+  while (existing.has((base + ' ' + i).toLowerCase())) i++;
+  return base + ' ' + i;
+}
+
+// ---- save ----
+async function savePrediction(name) {
+  if (!bracketState) return { ok: false, msg: 'No bracket to save yet.' };
+  const finalName = await resolveUniqueName(name);
+  const payload = {
+    profile_name:     finalName,
+    bracket:          bracketState,
+    groups_snapshot:  groups
+  };
+  const res = await sbFetch('predictions', {
+    method:  'POST',
+    headers: { 'Prefer': 'return=minimal' },
+    body:    JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    return { ok: false, msg: 'Save failed: ' + err };
+  }
+  return { ok: true, name: finalName };
+}
+
+// ---- load list ----
+async function loadPredictions() {
+  const res = await sbFetch('predictions?select=id,profile_name,created_at,bracket&order=created_at.desc&limit=50');
+  if (!res.ok) return null;
+  return await res.json();
+}
+
+// ---- read-only bracket view ----
+let viewingPrediction = false;
+
+function viewPrediction(row) {
+  closeViewOverlay();
+  // stash current state
+  const prevState  = bracketState;
+  const prevGroups = groups.slice();
+  // load prediction state
+  bracketState = row.bracket;
+  if (row.groups_snapshot) groups = row.groups_snapshot;
+  viewingPrediction = true;
+  document.getElementById('group-stage').style.display = 'none';
+  document.getElementById('bracket-view').style.display = 'block';
+  // show read-only badge next to title
+  const h2 = document.querySelector('#bracket-view header h2');
+  if (h2 && !h2.querySelector('.readonly-badge')) {
+    const badge = document.createElement('span');
+    badge.className = 'readonly-badge';
+    badge.id = 'readonlyBadge';
+    badge.textContent = '👁 ' + row.profile_name;
+    h2.appendChild(badge);
+  } else if (h2) {
+    h2.querySelector('.readonly-badge').textContent = '👁 ' + row.profile_name;
+  }
+  document.getElementById('savePredictionBtn').style.display = 'none';
+  document.getElementById('resetBracketBtn').style.display = 'none';
+  renderBracket();
+  // restore on back
+  const backBtn = document.getElementById('backToGroupsBtn');
+  backBtn._savedRestore = () => {
+    bracketState = prevState;
+    groups = prevGroups;
+    viewingPrediction = false;
+    const badge = document.getElementById('readonlyBadge');
+    if (badge) badge.remove();
+    document.getElementById('savePredictionBtn').style.display = '';
+    document.getElementById('resetBracketBtn').style.display = '';
+    backBtn._savedRestore = null;
+  };
+}
+
+// ---- overlay helpers ----
+function openSaveOverlay() {
+  if (!bracketState) { alert('Build your bracket first before saving.'); return; }
+  document.getElementById('predNameInput').value = '';
+  document.getElementById('saveStatus').textContent = '';
+  document.getElementById('saveStatus').className = 'sb-status';
+  document.getElementById('confirmSaveBtn').disabled = false;
+  document.getElementById('save-overlay').classList.add('active');
+  document.getElementById('predNameInput').focus();
+}
+function closeSaveOverlay() {
+  document.getElementById('save-overlay').classList.remove('active');
+}
+async function openViewOverlay() {
+  document.getElementById('view-overlay').classList.add('active');
+  const list = document.getElementById('predList');
+  list.innerHTML = '<div class="pred-loading">Loading predictions…</div>';
+  const rows = await loadPredictions();
+  if (!rows) {
+    list.innerHTML = '<div class="pred-empty">Could not load predictions. Check your connection.</div>';
+    return;
+  }
+  if (rows.length === 0) {
+    list.innerHTML = '<div class="pred-empty">No predictions saved yet. Be the first!</div>';
+    return;
+  }
+  list.innerHTML = '';
+  rows.forEach(row => {
+    const card = document.createElement('div');
+    card.className = 'pred-card';
+    const champ = row.bracket?.champion;
+    const champText = champ ? `🏆 ${champ.flag} ${champ.name}` : '🕐 In progress';
+    const date = new Date(row.created_at).toLocaleDateString('en-GB', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
+    card.innerHTML = `
+      <div>
+        <div class="pname">${row.profile_name}</div>
+        <div class="pmeta">${date}</div>
+      </div>
+      <div class="pchamp">${champText}</div>`;
+    card.addEventListener('click', () => viewPrediction(row));
+    list.appendChild(card);
+  });
+}
+function closeViewOverlay() {
+  document.getElementById('view-overlay').classList.remove('active');
+}
+
+// ---- bind ----
+document.getElementById('savePredictionBtn').addEventListener('click', openSaveOverlay);
+document.getElementById('cancelSaveBtn').addEventListener('click', closeSaveOverlay);
+document.getElementById('viewPredictionsBtn').addEventListener('click', openViewOverlay);
+document.getElementById('closeViewBtn').addEventListener('click', closeViewOverlay);
+
+document.getElementById('confirmSaveBtn').addEventListener('click', async () => {
+  const name = document.getElementById('predNameInput').value.trim() || 'My Prediction';
+  const btn = document.getElementById('confirmSaveBtn');
+  const status = document.getElementById('saveStatus');
+  btn.disabled = true;
+  status.className = 'sb-status loading';
+  status.textContent = 'Saving…';
+  const result = await savePrediction(name);
+  if (result.ok) {
+    status.className = 'sb-status ok';
+    status.textContent = `✅ Saved as "${result.name}"`;
+    btn.textContent = '✓ Saved';
+    setTimeout(() => {
+      closeSaveOverlay();
+      btn.textContent = 'Save';
+      btn.disabled = false;
+    }, 1800);
+  } else {
+    status.className = 'sb-status err';
+    status.textContent = result.msg;
+    btn.disabled = false;
+  }
+});
+
+// Enter key triggers save
+document.getElementById('predNameInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('confirmSaveBtn').click();
+});
 
 // Auto-apply live standings on load (falls back to baseline on any failure)
 fetchLiveStandings();
