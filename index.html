@@ -680,14 +680,23 @@ const MATCH_TO_SLOT = {
 };
 
 function buildBracketFromGames(gamesArr, teamMap) {
-  // Only activate when at least one knockout game exists
+  // Activate the live bracket only once the GROUP STAGE IS COMPLETE.
+  // The API ships the full knockout skeleton from day one, so we must not
+  // skip to the bracket while group games are still being played.
+  const groupGames = gamesArr.filter(g => g.type === 'group');
+  const groupsDone = groupGames.length > 0 && groupGames.every(g => g.finished === 'TRUE');
+  if (!groupsDone) return null;
+
   const knockoutGames = gamesArr.filter(g => g.type && g.type !== 'group');
   if (knockoutGames.length === 0) return null;
 
-  // Determine current stage
+  // Determine current stage = furthest stage that has at least one FINISHED
+  // game. The API ships the full fixture skeleton from day one, so a scheduled
+  // (notstarted) row must not count as "reached".
   const stageOrder = ['r32','r16','qf','sf','final'];
   let topStage = 'r32';
   knockoutGames.forEach(g => {
+    if (g.finished !== 'TRUE') return;               // only played games count
     const t = g.type === 'third' ? 'sf' : g.type;
     if (stageOrder.indexOf(t) > stageOrder.indexOf(topStage)) topStage = t;
   });
