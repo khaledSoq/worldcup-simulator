@@ -369,6 +369,7 @@ let groups = [];
 let bracketState = null;
 let selectedThird = new Set();
 let sortableInstances = [];
+let dataReady = false;
 
 // ============================================================
 //  INIT
@@ -381,6 +382,7 @@ function initData() {
       points: null, gd: null, gf: null
     }))
   }));
+  dataReady = true;
 }
 initData();
 
@@ -393,52 +395,63 @@ initData();
 // Accept flagcdn.com flag images and ESPN/api-sports logos
 const LOGO_URL_RE = /^https:\/\/(flagcdn\.com\/w\d+\/[\w-]+\.png|a\.(espncdn|espn)\.com\/i\/teamlogos\/soccer\/500\/\S+\.png|media\.api-sports\.io\/football\/teams\/\d+\.png)$/i;
 function applyFlag(el, flag) {
-  el.textContent = '';
-  if (typeof flag === 'string' && LOGO_URL_RE.test(flag)) {
-    const img = document.createElement('img');
-    img.src = flag;
-    img.alt = '';
-    img.referrerPolicy = 'no-referrer';
-    img.style.cssText = 'width:1.2rem;height:1.2rem;object-fit:contain;display:inline-block;vertical-align:middle';
-    el.appendChild(img);
-  } else if (typeof flag === 'string' && flag.length <= 8) {
-    el.textContent = flag;            // emoji
-  } else {
-    el.textContent = '⚽';            // unknown / unsafe
-  }
+  el.textContent = (typeof flag === "string" && flag.length > 0) ? flag : "⚽";
 }
 
+
 // ============================================================
-//  worldcup26.ir TEAM ID MAP
-//  Built at runtime from the merged standings.json which includes
-//  both /get/teams (names + flag URLs) and /get/groups (standings).
-//  This static fallback is used only if teams data is missing.
+//  TEAM ID → {name, flag} MAP
+//  IDs from worldcup26.ir/get/teams; flags from TEAMS_DATA.
 // ============================================================
-const WC26_TEAMS_FALLBACK = {
-  "1":["Mexico","🇲🇽"],          "2":["South Africa","🇿🇦"],
-  "3":["South Korea","🇰🇷"],     "4":["Czechia","🇨🇿"],
-  "5":["Canada","🇨🇦"],          "6":["Bosnia and Herzegovina","🇧🇦"],
-  "7":["Qatar","🇶🇦"],           "8":["Switzerland","🇨🇭"],
-  "9":["Brazil","🇧🇷"],          "10":["Morocco","🇲🇦"],
-  "11":["Haiti","🇭🇹"],           "12":["Scotland","🏴󠁧󠁢󠁳󠁣󠁴󠁿"],
-  "13":["United States","🇺🇸"],  "14":["Paraguay","🇵🇾"],
-  "15":["Australia","🇦🇺"],      "16":["Türkiye","🇹🇷"],
-  "17":["Germany","🇩🇪"],        "18":["Curaçao","🇨🇼"],
-  "19":["Ivory Coast","🇨🇮"],    "20":["Ecuador","🇪🇨"],
-  "21":["Netherlands","🇳🇱"],    "22":["Japan","🇯🇵"],
-  "23":["Sweden","🇸🇪"],         "24":["Tunisia","🇹🇳"],
-  "25":["Belgium","🇧🇪"],        "26":["Egypt","🇪🇬"],
-  "27":["Iran","🇮🇷"],           "28":["New Zealand","🇳🇿"],
-  "29":["Spain","🇪🇸"],          "30":["Cabo Verde","🇨🇻"],
-  "31":["Saudi Arabia","🇸🇦"],   "32":["Uruguay","🇺🇾"],
-  "33":["France","🇫🇷"],         "34":["Senegal","🇸🇳"],
-  "35":["Iraq","🇮🇶"],           "36":["Norway","🇳🇴"],
-  "37":["Argentina","🇦🇷"],      "38":["Algeria","🇩🇿"],
-  "39":["Austria","🇦🇹"],        "40":["Jordan","🇯🇴"],
-  "41":["Portugal","🇵🇹"],       "42":["DR Congo","🇨🇩"],
-  "43":["Uzbekistan","🇺🇿"],     "44":["Colombia","🇨🇴"],
-  "45":["England","🏴󠁧󠁢󠁥󠁮󠁧󠁿"],   "46":["Croatia","🇭🇷"],
-  "47":["Ghana","🇬🇭"],          "48":["Panama","🇵🇦"]
+const WC26_ID_TO_FLAG = {
+  "1": {name:"Mexico",                 flag:"🇲🇽"},
+  "2": {name:"South Africa",           flag:"🇿🇦"},
+  "3": {name:"South Korea",            flag:"🇰🇷"},
+  "4": {name:"Czechia",                flag:"🇨🇿"},
+  "5": {name:"Canada",                 flag:"🇨🇦"},
+  "6": {name:"Bosnia and Herzegovina", flag:"🇧🇦"},
+  "7": {name:"Qatar",                  flag:"🇶🇦"},
+  "8": {name:"Switzerland",            flag:"🇨🇭"},
+  "9": {name:"Brazil",                 flag:"🇧🇷"},
+  "10":{name:"Morocco",                flag:"🇲🇦"},
+  "11":{name:"Haiti",                  flag:"🇭🇹"},
+  "12":{name:"Scotland",               flag:"🏴󠁧󠁢󠁳󠁣󠁴󠁿"},
+  "13":{name:"United States",          flag:"🇺🇸"},
+  "14":{name:"Paraguay",               flag:"🇵🇾"},
+  "15":{name:"Australia",              flag:"🇦🇺"},
+  "16":{name:"Türkiye",                flag:"🇹🇷"},
+  "17":{name:"Germany",                flag:"🇩🇪"},
+  "18":{name:"Curaçao",                flag:"🇨🇼"},
+  "19":{name:"Ivory Coast",            flag:"🇨🇮"},
+  "20":{name:"Ecuador",                flag:"🇪🇨"},
+  "21":{name:"Netherlands",            flag:"🇳🇱"},
+  "22":{name:"Japan",                  flag:"🇯🇵"},
+  "23":{name:"Sweden",                 flag:"🇸🇪"},
+  "24":{name:"Tunisia",                flag:"🇹🇳"},
+  "25":{name:"Belgium",                flag:"🇧🇪"},
+  "26":{name:"Egypt",                  flag:"🇪🇬"},
+  "27":{name:"Iran",                   flag:"🇮🇷"},
+  "28":{name:"New Zealand",            flag:"🇳🇿"},
+  "29":{name:"Spain",                  flag:"🇪🇸"},
+  "30":{name:"Cabo Verde",             flag:"🇨🇻"},
+  "31":{name:"Saudi Arabia",           flag:"🇸🇦"},
+  "32":{name:"Uruguay",                flag:"🇺🇾"},
+  "33":{name:"France",                 flag:"🇫🇷"},
+  "34":{name:"Senegal",                flag:"🇸🇳"},
+  "35":{name:"Iraq",                   flag:"🇮🇶"},
+  "36":{name:"Norway",                 flag:"🇳🇴"},
+  "37":{name:"Argentina",              flag:"🇦🇷"},
+  "38":{name:"Algeria",                flag:"🇩🇿"},
+  "39":{name:"Austria",                flag:"🇦🇹"},
+  "40":{name:"Jordan",                 flag:"🇯🇴"},
+  "41":{name:"Portugal",               flag:"🇵🇹"},
+  "42":{name:"DR Congo",               flag:"🇨🇩"},
+  "43":{name:"Uzbekistan",             flag:"🇺🇿"},
+  "44":{name:"Colombia",               flag:"🇨🇴"},
+  "45":{name:"England",                flag:"🏴󠁧󠁢󠁥󠁮󠁧󠁿"},
+  "46":{name:"Croatia",                flag:"🇭🇷"},
+  "47":{name:"Ghana",                  flag:"🇬🇭"},
+  "48":{name:"Panama",                 flag:"🇵🇦"}
 };
 
 // ============================================================
@@ -464,19 +477,18 @@ function setDataBadge() {
   }
 }
 
-// Build id→{name,flag} from /get/teams array
-// flag is a validated flagcdn URL when available, emoji otherwise
+// Build id→{name,flag} — name from live API, flag always from TEAMS_DATA
 function buildTeamMap(teamsArr) {
   const map = {};
-  Object.entries(WC26_TEAMS_FALLBACK).forEach(([id,[name,flag]]) => {
+  // seed with TEAMS_DATA-derived flags (guaranteed to render correctly)
+  Object.entries(WC26_ID_TO_FLAG).forEach(([id, {name, flag}]) => {
     map[id] = { name, flag };
   });
+  // override name only from live data (never the flag)
   (teamsArr || []).forEach(t => {
     const id   = String(t.id ?? '');
-    const name = String(t.name_en ?? t.name ?? '');
-    const flag = (typeof t.flag === 'string' && LOGO_URL_RE.test(t.flag))
-      ? t.flag : (map[id]?.flag ?? '⚽');
-    if (id && name) map[id] = { name, flag };
+    const name = String(t.name_en ?? t.name ?? '').trim();
+    if (id && name && map[id]) map[id] = { name, flag: map[id].flag };
   });
   return map;
 }
@@ -528,18 +540,14 @@ async function fetchLiveStandings() {
   }
   setDataBadge();
   renderGroups();
+  dataReady = true;
 }
 
-// flagHtml — safe HTML string for innerHTML contexts (bracket slots, picker)
-// URL → <img>; emoji → plain text span (no XSS risk from LOGO_URL_RE-validated URLs)
+// flagHtml — for innerHTML contexts; emoji are safe, no escaping needed
 function flagHtml(flag) {
-  if (typeof flag === 'string' && LOGO_URL_RE.test(flag))
-    return `<img src="${flag}" alt="" referrerpolicy="no-referrer" `+
-           `style="width:1.1rem;height:0.85rem;object-fit:cover;`+
-           `display:inline-block;vertical-align:middle;border-radius:1px">`;
-  const safe = String(flag ?? '⚽').replace(/[<>&"]/g, '');
-  return safe;
+  return String(flag ?? '⚽');
 }
+function groupById(letter) { return groups.find(g => g.id === letter); }
 function teamAt(letter, pos) { const g = groupById(letter); return g ? g.teams[pos - 1] : null; }
 
 // ============================================================
@@ -678,13 +686,13 @@ function buildBracket() {
   const r16 = mk('r16', 8);
   const qf  = mk('qf', 4);   // 0=QF1,1=QF2 (left); 2=QF3,3=QF4 (right)
   const sf  = mk('sf', 2);   // 0=QF1·QF2 ; 1=QF3·QF4
-  const final = { id: 'final', home: null, away: null, winner: null };
+  const finalMatch = { id: 'final', home: null, away: null, winner: null };
   const third = { id: 'third', home: null, away: null, winner: null };
 
   const matchedCount = Object.keys(letterToSlot).length;
   const unmatched = selectedLetters.length - matchedCount;
 
-  return { r32, r16, qf, sf, final, third, champion: null, unmatched };
+  return { r32, r16, qf, sf, finalMatch, third, champion: null, unmatched };
 }
 
 function isReal(slot) { return slot && slot.name; }
@@ -737,7 +745,7 @@ function matchRef(round, idx) {
   if (round === 'r16') return s.r16[idx];
   if (round === 'qf')  return s.qf[idx];
   if (round === 'sf')  return s.sf[idx];
-  if (round === 'final') return s.final;
+  if (round === 'final') return s.finalMatch;
   if (round === 'third') return s.third;
   return null;
 }
@@ -873,7 +881,7 @@ function renderBracket() {
   if (!bracketState) return;
   const wall = document.getElementById('bracketWall');
   wall.innerHTML = '';
-  const { r32, r16, qf, sf, final, third } = bracketState;
+  const { r32, r16, qf, sf, finalMatch, third } = bracketState;
 
   // official FIFA match numbers
   const M_R32 = {0:74,1:77,2:73,3:75,4:83,5:84,6:81,7:82,8:76,9:78,10:79,11:80,12:86,13:88,14:85,15:87};
@@ -891,7 +899,7 @@ function renderBracket() {
   const cc = colEl('');
   cc.classList.add('center-col');
   cc.appendChild(matchEl(sf[0], 'sf', 0, 'Semi-Final · Match 101'));
-  cc.appendChild(matchEl(final, 'final', 0, '🏆 FINAL · Match 104', 'final-frame'));
+  cc.appendChild(matchEl(finalMatch, 'final', 0, '🏆 FINAL · Match 104', 'final-frame'));
 
   const champ = document.createElement('div');
   champ.className = 'champ-mini' + (bracketState.champion ? '' : ' empty');
@@ -973,6 +981,7 @@ function updateThirdCounter() {
 //  FLOW
 // ============================================================
 function generateBracket() {
+  if (!dataReady) { alert('Still loading standings — please wait a moment and try again.'); return; }
   document.getElementById('group-stage').style.display = 'none';
   document.getElementById('bracket-view').style.display = 'block';
   openThirdPick();
