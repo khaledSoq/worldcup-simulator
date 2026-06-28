@@ -679,6 +679,29 @@ const MATCH_TO_SLOT = {
   103:{round:'third',idx:0}, 104:{round:'final',idx:0}
 };
 
+// ============================================================
+//  OFFICIAL R32 FIXTURES (confirmed from FIFA, by team id)
+//  Used to fill R32 reliably regardless of API's partial data.
+// ============================================================
+const R32_OFFICIAL = {
+  73:{home:2,  away:5},   // South Africa v Canada
+  74:{home:17, away:14},  // Germany v Paraguay
+  75:{home:21, away:10},  // Netherlands v Morocco
+  76:{home:9,  away:22},  // Brazil v Japan
+  77:{home:33, away:23},  // France v Sweden
+  78:{home:19, away:36},  // Ivory Coast v Norway
+  79:{home:1,  away:20},  // Mexico v Ecuador
+  80:{home:45, away:42},  // England v DR Congo
+  81:{home:13, away:6},   // United States v Bosnia and Herzegovina
+  82:{home:25, away:34},  // Belgium v Senegal
+  83:{home:41, away:46},  // Portugal v Croatia
+  84:{home:29, away:39},  // Spain v Austria
+  85:{home:8,  away:38},  // Switzerland v Algeria
+  86:{home:37, away:30},  // Argentina v Cabo Verde
+  87:{home:44, away:47},  // Colombia v Ghana
+  88:{home:15, away:26}   // Australia v Egypt
+};
+
 function buildBracketFromGames(gamesArr, teamMap) {
   // Activate the live bracket only once the GROUP STAGE IS COMPLETE.
   // The API ships the full knockout skeleton from day one, so we must not
@@ -723,14 +746,19 @@ function buildBracketFromGames(gamesArr, teamMap) {
     return null;
   }
 
-  // resolve a team from a game row slot
-  function resolveTeam(teamId, teamNameEn, teamLabel, grp) {
+  // resolve a team by id from our team map
+  function teamFromId(teamId, grp) {
     const id = String(teamId ?? '');
     if (id && id !== '0' && teamMap[id]) {
       const t = teamMap[id];
       return { name: t.name, flag: t.flag, group: grp || '', seed: '' };
     }
-    // unknown slot — show label as placeholder
+    return null;
+  }
+  // resolve a team from a game row slot (id first, then label placeholder)
+  function resolveTeam(teamId, teamNameEn, teamLabel, grp) {
+    const t = teamFromId(teamId, grp);
+    if (t) return t;
     if (teamLabel) return { placeholder: teamLabel };
     return null;
   }
@@ -744,8 +772,16 @@ function buildBracketFromGames(gamesArr, teamMap) {
     const m = getMatchRef(slot.round, slot.idx);
     if (!m) return;
 
-    const home = resolveTeam(game.home_team_id, game.home_team_name_en, game.home_team_label, game.group);
-    const away = resolveTeam(game.away_team_id, game.away_team_name_en, game.away_team_label, game.group);
+    let home, away;
+    // For R32, ALWAYS trust the official FIFA fixture over the API's
+    // partial/placeholder team ids.
+    if (slot.round === 'r32' && R32_OFFICIAL[matchId]) {
+      home = teamFromId(R32_OFFICIAL[matchId].home) || resolveTeam(game.home_team_id, game.home_team_name_en, game.home_team_label, game.group);
+      away = teamFromId(R32_OFFICIAL[matchId].away) || resolveTeam(game.away_team_id, game.away_team_name_en, game.away_team_label, game.group);
+    } else {
+      home = resolveTeam(game.home_team_id, game.home_team_name_en, game.home_team_label, game.group);
+      away = resolveTeam(game.away_team_id, game.away_team_name_en, game.away_team_label, game.group);
+    }
     if (home) m.home = home;
     if (away) m.away = away;
 
