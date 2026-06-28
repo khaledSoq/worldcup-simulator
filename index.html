@@ -311,6 +311,7 @@
       </h2>
       <div class="flex gap-2 flex-wrap">
         <button id="savePredictionBtn" class="btn-green text-xs sm:text-sm">💾 Save Prediction</button>
+        <button id="viewPredictionsBracketBtn" class="btn-outline text-xs sm:text-sm">📋 Predictions</button>
         <button id="resetBracketBtn" class="btn-danger-outline text-xs sm:text-sm">🔄 Reset Bracket</button>
         <button id="backToGroupsBtn" class="btn-outline text-xs sm:text-sm">← Back to Groups</button>
       </div>
@@ -1460,6 +1461,7 @@ function closeViewOverlay() {
 document.getElementById('savePredictionBtn').addEventListener('click', openSaveOverlay);
 document.getElementById('cancelSaveBtn').addEventListener('click', closeSaveOverlay);
 document.getElementById('viewPredictionsBtn').addEventListener('click', openViewOverlay);
+document.getElementById('viewPredictionsBracketBtn').addEventListener('click', openViewOverlay);
 document.getElementById('closeViewBtn').addEventListener('click', closeViewOverlay);
 
 document.getElementById('confirmSaveBtn').addEventListener('click', async () => {
