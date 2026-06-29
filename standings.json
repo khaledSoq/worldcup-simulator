@@ -2291,17 +2291,17 @@
       "id": "76",
       "home_team_id": "9",
       "away_team_id": "22",
-      "home_score": "0",
-      "away_score": "0",
-      "home_scorers": "null",
-      "away_scorers": "null",
+      "home_score": "2",
+      "away_score": "1",
+      "home_scorers": "{\"Casemiro 56'\",\"Gabriel Martinelli 90+5'\"}",
+      "away_scorers": "{\"Kaishū Sano 29'\"}",
       "group": "R32",
       "matchday": "4",
       "local_date": "06/29/2026 12:00",
       "persian_date": "1405-04-08 12:00",
       "stadium_id": "5",
-      "finished": "FALSE",
-      "time_elapsed": "notstarted",
+      "finished": "TRUE",
+      "time_elapsed": "finished",
       "type": "r32",
       "home_team_label": "Winner Group C",
       "away_team_label": "Runner-up Group F",
@@ -2843,7 +2843,7 @@
     {
       "_id": "679c9c8a5749c4077500e085",
       "id": "91",
-      "home_team_id": "0",
+      "home_team_id": "9",
       "away_team_id": "0",
       "home_score": "0",
       "away_score": "0",
@@ -2858,7 +2858,9 @@
       "time_elapsed": "notstarted",
       "type": "r16",
       "home_team_label": "Winner Match 76",
-      "away_team_label": "Winner Match 78"
+      "away_team_label": "Winner Match 78",
+      "home_team_name_en": "Brazil",
+      "home_team_name_fa": "برزیل"
     },
     {
       "_id": "679c9c8a5749c4077500e08b",
@@ -3125,8 +3127,8 @@
       "id": "74",
       "home_team_id": "17",
       "away_team_id": "14",
-      "home_score": "0",
-      "away_score": "0",
+      "home_score": "null",
+      "away_score": "null",
       "home_scorers": "null",
       "away_scorers": "null",
       "group": "R32",
@@ -3459,5 +3461,5 @@
       "away_team_label": "Winner Match 92"
     }
   ],
-  "lastUpdated": "2026-06-29 13:22 AST"
+  "lastUpdated": "2026-06-29 22:29 AST"
 }
