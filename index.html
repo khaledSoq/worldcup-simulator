@@ -276,9 +276,87 @@
     color: #60a5fa; font-size: .65rem; font-weight: 700; letter-spacing: .06em;
     padding: .15rem .5rem; border-radius: 20px; margin-left: .5rem; vertical-align: middle;
   }
+
+  /* ---- top nav tabs ---- */
+  .topnav { display:flex; gap:.4rem; flex-wrap:wrap; justify-content:center; margin-bottom:1rem; }
+  .topnav button {
+    background:#141b24; border:1px solid #2a3346; color:#94a3b8;
+    padding:.5rem .9rem; border-radius:30px; font-size:.8rem; font-weight:700;
+    cursor:pointer; transition:all .15s; white-space:nowrap;
+  }
+  .topnav button.active { background:#1e3a5f; border-color:#3b82f6; color:#fff; }
+  .topnav button:hover { border-color:#3b82f6; }
+
+  /* ---- score prediction cards ---- */
+  .sp-wrap { max-width:640px; margin:0 auto; display:flex; flex-direction:column; gap:.85rem; }
+  .sp-card {
+    background:linear-gradient(160deg,#16202e,#101824); border:1px solid #25303f;
+    border-radius:16px; padding:1rem 1.1rem;
+  }
+  .sp-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:.75rem; }
+  .sp-tag {
+    font-size:.62rem; font-weight:800; letter-spacing:.08em; color:#5eead4;
+    border:1px solid #134e4a; background:#0b211f; padding:.2rem .55rem; border-radius:20px;
+  }
+  .sp-time { font-size:.7rem; color:#64748b; }
+  .sp-time.locked { color:#f87171; }
+  .sp-teams { display:flex; align-items:center; justify-content:space-between; gap:.5rem; }
+  .sp-team { display:flex; flex-direction:column; align-items:center; gap:.3rem; flex:1; min-width:0; }
+  .sp-team .fl { font-size:2rem; line-height:1; }
+  .sp-team .nm { font-size:.78rem; font-weight:700; color:#e2e8f0; text-align:center;
+                 white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
+  .sp-vs { font-size:.8rem; color:#475569; font-weight:800; padding:0 .3rem; }
+  .sp-score-in { display:flex; align-items:center; gap:.4rem; justify-content:center; margin-top:.85rem; }
+  .sp-score-in input {
+    width:54px; height:48px; text-align:center; font-size:1.3rem; font-weight:800;
+    background:#0b121b; border:1px solid #2a3346; border-radius:10px; color:#fff; outline:none;
+  }
+  .sp-score-in input:focus { border-color:#3b82f6; }
+  .sp-score-in .colon { font-size:1.3rem; color:#475569; font-weight:800; }
+  .sp-save {
+    width:100%; margin-top:.8rem; background:#22c55e; color:#06210f; border:none;
+    border-radius:10px; padding:.55rem; font-weight:800; font-size:.85rem; cursor:pointer;
+  }
+  .sp-save:disabled { background:#1f3a2a; color:#3f6b4f; cursor:not-allowed; }
+  .sp-save.saved { background:#15803d; color:#d1fae5; }
+  .sp-locked-note { text-align:center; font-size:.72rem; color:#f87171; margin-top:.6rem; }
+  .sp-pending { text-align:center; font-size:.72rem; color:#64748b; margin-top:.5rem; font-style:italic; }
+  .sp-result { margin-top:.85rem; border-top:1px solid #25303f; padding-top:.7rem; }
+  .sp-final { text-align:center; font-size:1.4rem; font-weight:900; color:#fbbf24; margin-bottom:.5rem; }
+  .sp-reslist { font-size:.72rem; color:#94a3b8; line-height:1.5; }
+  .sp-reslist .lbl { color:#5eead4; font-weight:700; }
+  .sp-reslist .exact { color:#fbbf24; font-weight:700; }
+  .sp-mypick { text-align:center; font-size:.7rem; color:#60a5fa; margin-top:.4rem; }
+
+  .name-bar { display:flex; align-items:center; justify-content:center; gap:.5rem;
+              font-size:.8rem; color:#94a3b8; margin-bottom:1rem; }
+  .name-bar b { color:#5eead4; }
+  .name-bar button { background:none; border:none; color:#3b82f6; cursor:pointer;
+                     font-size:.75rem; text-decoration:underline; }
+
+  /* ---- leaderboard ---- */
+  .lb-wrap { max-width:560px; margin:0 auto; }
+  .lb-row { display:flex; align-items:center; gap:.75rem; padding:.7rem .9rem;
+            background:#141b24; border:1px solid #25303f; border-radius:12px; margin-bottom:.5rem; }
+  .lb-rank { font-size:1rem; font-weight:900; color:#64748b; width:28px; text-align:center; }
+  .lb-rank.gold{color:#fbbf24} .lb-rank.silver{color:#cbd5e1} .lb-rank.bronze{color:#d97706}
+  .lb-name { flex:1; font-weight:700; color:#e2e8f0; font-size:.9rem; }
+  .lb-pts { font-weight:900; color:#22c55e; font-size:1rem; }
+  .lb-pts small { color:#475569; font-weight:600; font-size:.65rem; }
+  .lb-empty { text-align:center; color:#475569; padding:2rem 0; }
 </style>
 </head>
 <body>
+
+  <!-- ============ TOP NAV ============ -->
+  <div class="max-w-[1400px] mx-auto px-3 pt-3">
+    <div class="topnav" id="topnav">
+      <button data-view="group-stage" class="active">🏟️ Groups</button>
+      <button data-view="bracket-view">🏆 Bracket</button>
+      <button data-view="scores-view">🎯 Predict Scores</button>
+      <button data-view="leaderboard-view">📊 Leaderboard</button>
+    </div>
+  </div>
 
   <!-- ============ GROUP STAGE ============ -->
   <div id="group-stage">
@@ -329,6 +407,26 @@
       <div class="champ-name" id="champName">—</div>
       <div class="champ-sub">🏅 2026 FIFA World Cup Champion</div>
     </div>
+  </div>
+
+  <!-- ============ PREDICT SCORES VIEW ============ -->
+  <div id="scores-view" class="max-w-[700px] mx-auto" style="display:none">
+    <header class="text-center mb-3">
+      <h2 class="text-xl sm:text-2xl font-bold text-white">🎯 Predict <span class="text-teal-400">Scores</span></h2>
+      <p class="text-gray-500 text-xs mt-1">Predict exact scores for knockout matches. +1 for the winner, +1 for the exact score.</p>
+      <div id="scoresDataBadge" class="text-[0.7rem] mt-1 text-gray-400"></div>
+    </header>
+    <div class="name-bar" id="nameBar"></div>
+    <div id="scoresWrap" class="sp-wrap"></div>
+  </div>
+
+  <!-- ============ LEADERBOARD VIEW ============ -->
+  <div id="leaderboard-view" class="max-w-[560px] mx-auto" style="display:none">
+    <header class="text-center mb-3">
+      <h2 class="text-xl sm:text-2xl font-bold text-white">🏆 <span class="text-yellow-400">Leaderboard</span></h2>
+      <p class="text-gray-500 text-xs mt-1">Points from finished matches · +1 correct winner · +1 exact score</p>
+    </header>
+    <div id="lbWrap" class="lb-wrap"><div class="lb-empty">Loading…</div></div>
   </div>
 
   <!-- ============ SAVE PREDICTION MODAL ============ -->
@@ -633,6 +731,12 @@ async function fetchLiveStandings() {
   }
   setDataBadge();
 
+  // store games + team map globally for the Predict Scores tab
+  liveGames = data?.games ?? [];
+  liveTeamMap = buildTeamMap(data?.teams ?? []);
+  const scoresBadge = document.getElementById('scoresDataBadge');
+  if (scoresBadge && lastUpdated) scoresBadge.innerHTML = `<span style="color:#22c55e">●</span> updated ${lastUpdated}`;
+
   // Parse games and decide whether to skip group stage
   const gamesArr = data?.games ?? [];
   const autoState = gamesArr.length ? buildBracketFromGames(gamesArr, buildTeamMap(data?.teams ?? [])) : null;
@@ -655,6 +759,12 @@ async function fetchLiveStandings() {
     const bracketBadge = document.getElementById('bracketDataBadge');
     if (badge) badge.innerHTML = stageHtml;
     if (bracketBadge) bracketBadge.innerHTML = stageHtml;
+    // hide Groups tab — knockout is underway
+    const groupsTab = document.querySelector('#topnav button[data-view="group-stage"]');
+    if (groupsTab) groupsTab.style.display = 'none';
+    // sync nav to bracket tab
+    document.querySelectorAll('#topnav button').forEach(b =>
+      b.classList.toggle('active', b.dataset.view==='bracket-view'));
     renderBracket();
   } else {
     renderGroups();
@@ -1505,6 +1615,250 @@ document.getElementById('confirmSaveBtn').addEventListener('click', async () => 
 document.getElementById('predNameInput').addEventListener('keydown', e => {
   if (e.key === 'Enter') document.getElementById('confirmSaveBtn').click();
 });
+
+// ============================================================
+//  SCORE PREDICTIONS + LEADERBOARD
+// ============================================================
+
+// Kickoff override map — fill from FIFA official site if API dates are messy.
+// Format: matchId -> ISO 8601 with timezone, e.g. '2026-06-29T20:00:00+03:00'
+const KICKOFF_OVERRIDE = {
+  // 73: '2026-06-28T...',
+};
+
+// store latest games + teams globally for the scores tab
+let liveGames = [];
+let liveTeamMap = {};
+
+function getProfileName() {
+  try { return localStorage.getItem('wc_profile') || ''; } catch { return ''; }
+}
+function setProfileName(n) {
+  try { localStorage.setItem('wc_profile', n); } catch {}
+}
+
+function promptProfileName() {
+  const current = getProfileName();
+  const name = prompt('What name should we use for your predictions?', current || '');
+  if (name && name.trim()) { setProfileName(name.trim()); renderNameBar(); renderScoreCards(); }
+}
+
+function renderNameBar() {
+  const bar = document.getElementById('nameBar');
+  const name = getProfileName();
+  if (name) {
+    bar.innerHTML = `Predicting as <b>${name.replace(/[<>&]/g,'')}</b> <button id="changeNameBtn">✏️ change</button>`;
+  } else {
+    bar.innerHTML = `<button id="changeNameBtn">＋ Set your name to start predicting</button>`;
+  }
+  document.getElementById('changeNameBtn').addEventListener('click', promptProfileName);
+}
+
+// kickoff time for a game (override first, then API local_date "MM/DD/YYYY HH:MM")
+function kickoffTime(game) {
+  const mid = parseInt(game.id);
+  if (KICKOFF_OVERRIDE[mid]) return new Date(KICKOFF_OVERRIDE[mid]);
+  const s = game.local_date;
+  if (typeof s === 'string' && /^\d{2}\/\d{2}\/\d{4}/.test(s)) {
+    const [datePart, timePart] = s.split(' ');
+    const [mm, dd, yyyy] = datePart.split('/').map(Number);
+    const [hh, mi] = (timePart || '00:00').split(':').map(Number);
+    // API times are GMT+3 (KSA / tournament local feed); treat as +03:00
+    return new Date(Date.UTC(yyyy, mm-1, dd, hh-3, mi));
+  }
+  return null;
+}
+function isLocked(game) {
+  const ko = kickoffTime(game);
+  if (!ko) return game.finished === 'TRUE' || game.time_elapsed !== 'notstarted';
+  return Date.now() >= (ko.getTime() - 5*60*1000);
+}
+
+// resolve team {name,flag} for a knockout game side, using R32_OFFICIAL + map
+function scoreTeam(game, side) {
+  const mid = parseInt(game.id);
+  if (game.type === 'r32' && R32_OFFICIAL[mid]) {
+    const id = side==='home' ? R32_OFFICIAL[mid].home : R32_OFFICIAL[mid].away;
+    const t = liveTeamMap[String(id)];
+    if (t) return t;
+  }
+  const tid = String(side==='home' ? game.home_team_id : game.away_team_id);
+  if (tid && tid !== '0' && liveTeamMap[tid]) return liveTeamMap[tid];
+  return null; // not yet assigned
+}
+
+const STAGE_TAG = { r32:'LAST 32', r16:'LAST 16', qf:'QUARTER-FINAL', sf:'SEMI-FINAL', third:'3RD PLACE', final:'FINAL' };
+
+let myScorePicks = {};   // matchId -> {home, away}
+let allScorePicks = [];  // all rows from DB
+
+async function loadScorePicks() {
+  const res = await sbFetch('score_predictions?select=profile_name,match_id,predicted_home,predicted_away&order=match_id.asc');
+  allScorePicks = res.ok ? await res.json() : [];
+  const me = getProfileName();
+  myScorePicks = {};
+  allScorePicks.forEach(r => {
+    if (r.profile_name === me) myScorePicks[r.match_id] = { home:r.predicted_home, away:r.predicted_away };
+  });
+}
+
+async function saveScorePick(matchId, home, away) {
+  const name = getProfileName();
+  if (!name) { promptProfileName(); return {ok:false}; }
+  const res = await sbFetch('score_predictions', {
+    method:'POST',
+    headers:{ 'Prefer':'resolution=merge-duplicates' },
+    body: JSON.stringify({ profile_name:name, match_id:matchId,
+      predicted_home:home, predicted_away:away, updated_at:new Date().toISOString() })
+  });
+  return { ok: res.ok, err: res.ok ? null : await res.text() };
+}
+
+function renderScoreCards() {
+  const wrap = document.getElementById('scoresWrap');
+  const knockout = liveGames
+    .filter(g => g.type && g.type !== 'group' && MATCH_TO_SLOT[parseInt(g.id)])
+    .sort((a,b) => parseInt(a.id) - parseInt(b.id));
+  if (knockout.length === 0) {
+    wrap.innerHTML = `<div class="sp-pending">Knockout matches will appear here once the bracket is set.</div>`;
+    return;
+  }
+  wrap.innerHTML = '';
+  knockout.forEach(game => {
+    const mid = parseInt(game.id);
+    const home = scoreTeam(game, 'home');
+    const away = scoreTeam(game, 'away');
+    const finished = game.finished === 'TRUE';
+    const locked = isLocked(game);
+    const card = document.createElement('div');
+    card.className = 'sp-card';
+
+    const ko = kickoffTime(game);
+    const koStr = ko ? ko.toLocaleString('en-GB',{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}) : '';
+
+    let inner = `<div class="sp-head">
+        <span class="sp-tag">${STAGE_TAG[game.type]||'KNOCKOUT'} · M${mid}</span>
+        <span class="sp-time ${locked&&!finished?'locked':''}">${finished?'Full time':koStr}</span>
+      </div>`;
+
+    if (!home || !away) {
+      inner += `<div class="sp-pending">Teams not assigned yet (${game.home_team_label||'TBD'} v ${game.away_team_label||'TBD'})</div>`;
+      card.innerHTML = inner; wrap.appendChild(card); return;
+    }
+
+    inner += `<div class="sp-teams">
+        <div class="sp-team"><span class="fl">${home.flag}</span><span class="nm">${home.name}</span></div>
+        <span class="sp-vs">VS</span>
+        <div class="sp-team"><span class="fl">${away.flag}</span><span class="nm">${away.name}</span></div>
+      </div>`;
+
+    const mine = myScorePicks[mid];
+
+    if (finished) {
+      const hs = parseInt(game.home_score), as_ = parseInt(game.away_score);
+      const picks = allScorePicks.filter(p => p.match_id === mid);
+      const realWinner = hs>as_ ? 'home' : (as_>hs ? 'away' : 'draw');
+      const correctWinner = [], exact = [];
+      picks.forEach(p => {
+        const pw = p.predicted_home>p.predicted_away?'home':(p.predicted_away>p.predicted_home?'away':'draw');
+        if (p.predicted_home===hs && p.predicted_away===as_) exact.push(p.profile_name);
+        else if (pw===realWinner) correctWinner.push(p.profile_name);
+      });
+      inner += `<div class="sp-result">
+          <div class="sp-final">${hs} : ${as_}</div>
+          <div class="sp-reslist"><span class="exact">🎯 Exact (${exact.length}):</span> ${exact.join(', ')||'—'}</div>
+          <div class="sp-reslist"><span class="lbl">✅ Winner (${correctWinner.length}):</span> ${correctWinner.join(', ')||'—'}</div>
+        </div>`;
+      if (mine) inner += `<div class="sp-mypick">Your pick: ${mine.home} : ${mine.away}</div>`;
+    } else if (locked) {
+      inner += `<div class="sp-locked-note">🔒 Locked (within 5 min of kickoff)</div>`;
+      if (mine) inner += `<div class="sp-mypick">Your pick: ${mine.home} : ${mine.away}</div>`;
+    } else {
+      const hv = mine ? mine.home : '';
+      const av = mine ? mine.away : '';
+      inner += `<div class="sp-score-in">
+          <input type="number" min="0" max="99" id="sh-${mid}" value="${hv}" inputmode="numeric">
+          <span class="colon">:</span>
+          <input type="number" min="0" max="99" id="sa-${mid}" value="${av}" inputmode="numeric">
+        </div>
+        <button class="sp-save" id="save-${mid}">${mine?'Update Prediction':'Save Prediction'}</button>`;
+    }
+    card.innerHTML = inner;
+    wrap.appendChild(card);
+
+    if (!finished && !locked) {
+      card.querySelector(`#save-${mid}`).addEventListener('click', async () => {
+        const h = parseInt(document.getElementById(`sh-${mid}`).value);
+        const a = parseInt(document.getElementById(`sa-${mid}`).value);
+        if (isNaN(h)||isNaN(a)||h<0||a<0) { alert('Enter both scores (0 or more).'); return; }
+        const btn = card.querySelector(`#save-${mid}`);
+        btn.disabled = true; btn.textContent = 'Saving…';
+        const r = await saveScorePick(mid, h, a);
+        if (r.ok) {
+          myScorePicks[mid] = {home:h, away:a};
+          btn.textContent = '✓ Saved'; btn.classList.add('saved');
+          setTimeout(()=>{ btn.textContent='Update Prediction'; btn.classList.remove('saved'); btn.disabled=false; }, 1500);
+          await loadScorePicks();
+        } else {
+          btn.textContent = 'Save failed'; btn.disabled = false;
+          console.warn(r.err);
+        }
+      });
+    }
+  });
+}
+
+async function openScoresView() {
+  renderNameBar();
+  document.getElementById('scoresWrap').innerHTML = '<div class="sp-pending">Loading…</div>';
+  await loadScorePicks();
+  renderScoreCards();
+}
+
+async function openLeaderboard() {
+  const wrap = document.getElementById('lbWrap');
+  wrap.innerHTML = '<div class="lb-empty">Loading…</div>';
+  await loadScorePicks();
+  const finishedById = {};
+  liveGames.forEach(g => { if (g.finished==='TRUE') finishedById[parseInt(g.id)] = g; });
+  const scores = {};
+  allScorePicks.forEach(p => {
+    const g = finishedById[p.match_id];
+    if (!g) return;
+    const hs=parseInt(g.home_score), as_=parseInt(g.away_score);
+    if (isNaN(hs)||isNaN(as_)) return;
+    scores[p.profile_name] = scores[p.profile_name] || 0;
+    const rw = hs>as_?'home':(as_>hs?'away':'draw');
+    const pw = p.predicted_home>p.predicted_away?'home':(p.predicted_away>p.predicted_home?'away':'draw');
+    if (p.predicted_home===hs && p.predicted_away===as_) scores[p.profile_name]+=2;
+    else if (pw===rw) scores[p.profile_name]+=1;
+  });
+  const ranked = Object.entries(scores).sort((a,b)=>b[1]-a[1]);
+  if (ranked.length===0) { wrap.innerHTML='<div class="lb-empty">No points yet — predictions get scored once matches finish.</div>'; return; }
+  wrap.innerHTML='';
+  ranked.forEach(([name,pts],i)=>{
+    const rankCls = i===0?'gold':i===1?'silver':i===2?'bronze':'';
+    const row=document.createElement('div'); row.className='lb-row';
+    row.innerHTML = `<div class="lb-rank ${rankCls}">${i+1}</div>
+      <div class="lb-name">${name.replace(/[<>&]/g,'')}</div>
+      <div class="lb-pts">${pts} <small>pts</small></div>`;
+    wrap.appendChild(row);
+  });
+}
+
+// ---- nav ----
+function switchView(view) {
+  ['group-stage','bracket-view','scores-view','leaderboard-view'].forEach(v => {
+    const el = document.getElementById(v);
+    if (el) el.style.display = (v===view) ? 'block' : 'none';
+  });
+  document.querySelectorAll('#topnav button').forEach(b =>
+    b.classList.toggle('active', b.dataset.view===view));
+  if (view==='scores-view') openScoresView();
+  if (view==='leaderboard-view') openLeaderboard();
+}
+document.querySelectorAll('#topnav button').forEach(b =>
+  b.addEventListener('click', () => switchView(b.dataset.view)));
 
 // Auto-apply live standings on load (falls back to baseline on any failure)
 fetchLiveStandings();
