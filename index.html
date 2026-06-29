@@ -1748,7 +1748,11 @@ function renderScoreCards() {
   const wrap = document.getElementById('scoresWrap');
   const knockout = liveGames
     .filter(g => g.type && g.type !== 'group' && MATCH_TO_SLOT[parseInt(g.id)])
-    .sort((a,b) => parseInt(a.id) - parseInt(b.id));
+    .sort((a,b) => {
+      const ta = kickoffTime(a), tb = kickoffTime(b);
+      if (ta && tb) return ta - tb;
+      return parseInt(a.id) - parseInt(b.id);
+    });
   if (knockout.length === 0) {
     wrap.innerHTML = `<div class="sp-pending">Knockout matches will appear here once the bracket is set.</div>`;
     return;
