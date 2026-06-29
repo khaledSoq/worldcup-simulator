@@ -1810,11 +1810,13 @@ function renderScoreCards() {
     } else {
       const hv = mine ? mine.home : '';
       const av = mine ? mine.away : '';
+      const noName = !getProfileName();
       inner += `<div class="sp-score-in">
           <input type="number" min="0" max="99" id="sh-${mid}" value="${hv}" inputmode="numeric">
           <span class="colon">:</span>
           <input type="number" min="0" max="99" id="sa-${mid}" value="${av}" inputmode="numeric">
         </div>
+        ${noName ? `<div class="sp-pending" style="color:#f59e0b">⚠️ Set your name first (tap the bar above)</div>` : ''}
         <button class="sp-save" id="save-${mid}">${mine?'Update Prediction':'Save Prediction'}</button>`;
     }
     card.innerHTML = inner;
@@ -1827,6 +1829,14 @@ function renderScoreCards() {
         if (isNaN(h)||isNaN(a)||h<0||a<0) { alert('Enter both scores (0 or more).'); return; }
         const btn = card.querySelector(`#save-${mid}`);
         btn.disabled = true; btn.textContent = 'Saving…';
+        const name = getProfileName();
+        if (!name) {
+          promptProfileName();
+          if (!getProfileName()) {
+            btn.disabled = false; btn.textContent = mine ? 'Update Prediction' : 'Save Prediction';
+            return;
+          }
+        }
         const r = await saveScorePick(mid, h, a);
         if (r.ok) {
           myScorePicks[mid] = {home:h, away:a};
