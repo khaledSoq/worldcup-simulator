@@ -317,7 +317,8 @@
       </div>
     </header>
 
-    <p class="text-gray-500 text-xs mb-3">Tap a team to send them through. The bracket follows the official 2026 fixture map.</p>
+    <p class="text-gray-500 text-xs mb-1">Tap a team to send them through. The bracket follows the official 2026 fixture map.</p>
+    <div id="bracketDataBadge" class="text-[0.7rem] mb-3 text-gray-400" style="letter-spacing:.02em"></div>
 
     <div id="bracketContainer" class="overflow-x-auto pb-4">
       <div id="bracketWall" class="bracket-wall"></div>
@@ -556,15 +557,16 @@ let lastUpdated = null;
 
 function setDataBadge() {
   const badge = document.getElementById('dataBadge');
-  if (!badge) return;
+  const bracketBadge = document.getElementById('bracketDataBadge');
+  let html = '';
   if (dataSource === 'live') {
     const when = lastUpdated ? ` · updated ${lastUpdated}` : '';
-    badge.innerHTML = `<span style="color:#22c55e">●</span> Live standings${when}`;
-    badge.title = 'Live data from worldcup26.ir';
+    html = `<span style="color:#22c55e">●</span> Live standings${when}`;
   } else {
-    badge.innerHTML = `<span style="color:#fbbf24">●</span> Baseline data`;
-    badge.title = 'Using built-in fallback order';
+    html = `<span style="color:#fbbf24">●</span> Baseline data`;
   }
+  if (badge) badge.innerHTML = html;
+  if (bracketBadge) bracketBadge.innerHTML = html;
 }
 
 // Build id→{name,flag} — name from live API, flag always from TEAMS_DATA
@@ -645,13 +647,14 @@ async function fetchLiveStandings() {
     // update subtitle
     const sub = document.querySelector('#group-stage header p');
     if (sub) sub.textContent = 'Knockout stage is underway — standings are locked.';
-    // show stage badge
+    // show stage badge on both pages
+    const stageLabel = { r32:'Round of 32', r16:'Round of 16', qf:'Quarter-Finals', sf:'Semi-Finals', final:'Final' };
+    const when = lastUpdated ? ` · updated ${lastUpdated}` : '';
+    const stageHtml = `<span style="color:#22c55e">●</span> ${stageLabel[autoState.stage] || 'Knockout'} in progress${when}`;
     const badge = document.getElementById('dataBadge');
-    if (badge) {
-      const stageLabel = { r32:'Round of 32', r16:'Round of 16', qf:'Quarter-Finals', sf:'Semi-Finals', final:'Final' };
-      const when = lastUpdated ? ` · ${lastUpdated}` : '';
-      badge.innerHTML = `<span style="color:#22c55e">●</span> ${stageLabel[autoState.stage] || 'Knockout'} in progress${when}`;
-    }
+    const bracketBadge = document.getElementById('bracketDataBadge');
+    if (badge) badge.innerHTML = stageHtml;
+    if (bracketBadge) bracketBadge.innerHTML = stageHtml;
     renderBracket();
   } else {
     renderGroups();
@@ -764,8 +767,14 @@ function buildBracketFromGames(gamesArr, teamMap) {
     return null;
   }
 
+  // Process games in round order so R32 winners propagate before R16 is filled
+  const roundOrder = ['group','r32','r16','qf','sf','third','final'];
+  const sorted = [...gamesArr].sort((a,b) =>
+    roundOrder.indexOf(a.type) - roundOrder.indexOf(b.type)
+  );
+
   // Fill bracket from games
-  gamesArr.forEach(game => {
+  sorted.forEach(game => {
     const matchId = parseInt(game.id);
     const slot = MATCH_TO_SLOT[matchId];
     if (!slot) return;
@@ -774,8 +783,7 @@ function buildBracketFromGames(gamesArr, teamMap) {
     if (!m) return;
 
     let home, away;
-    // For R32, ALWAYS trust the official FIFA fixture over the API's
-    // partial/placeholder team ids.
+    // For R32, always use official FIFA fixtures
     if (slot.round === 'r32' && R32_OFFICIAL[matchId]) {
       home = teamFromId(R32_OFFICIAL[matchId].home) || resolveTeam(game.home_team_id, game.home_team_name_en, game.home_team_label, game.group);
       away = teamFromId(R32_OFFICIAL[matchId].away) || resolveTeam(game.away_team_id, game.away_team_name_en, game.away_team_label, game.group);
@@ -783,8 +791,15 @@ function buildBracketFromGames(gamesArr, teamMap) {
       home = resolveTeam(game.home_team_id, game.home_team_name_en, game.home_team_label, game.group);
       away = resolveTeam(game.away_team_id, game.away_team_name_en, game.away_team_label, game.group);
     }
-    if (home) m.home = home;
-    if (away) m.away = away;
+
+    // Only set team slots from API if: it's a real team (not placeholder)
+    // OR the slot is currently empty (don't overwrite a propagated winner with a label)
+    if (home) {
+      if (isReal(home) || !isReal(m.home)) m.home = home;
+    }
+    if (away) {
+      if (isReal(away) || !isReal(m.away)) m.away = away;
+    }
 
     // Set winner for finished matches
     if (game.finished === 'TRUE') {
@@ -793,16 +808,14 @@ function buildBracketFromGames(gamesArr, teamMap) {
       if (!isNaN(hs) && !isNaN(as_)) {
         if (hs > as_) { m.winner = m.home; }
         else if (as_ > hs) { m.winner = m.away; }
-        // draws shouldn't happen in knockout — leave winner null if equal
       }
-      // propagate winner into next round automatically
+      // propagate winner into next round
       if (m.winner) {
         const next = routeNext(slot.round, slot.idx);
         if (next) {
           const nm = getMatchRef(next.round, next.idx);
           if (nm) nm[next.slot] = m.winner;
         }
-        // SF losers → 3rd place
         if (slot.round === 'sf') {
           const loser = isReal(m.home) && m.winner.name===m.home.name ? m.away : m.home;
           if (isReal(loser)) {
