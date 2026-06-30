@@ -762,6 +762,9 @@ async function fetchLiveStandings() {
     // hide Groups tab — knockout is underway
     const groupsTab = document.querySelector('#topnav button[data-view="group-stage"]');
     if (groupsTab) groupsTab.style.display = 'none';
+    // update back button text
+    const backBtn = document.getElementById('backToGroupsBtn');
+    if (backBtn) backBtn.textContent = '← Back to Bracket';
     // sync nav to bracket tab
     document.querySelectorAll('#topnav button').forEach(b =>
       b.classList.toggle('active', b.dataset.view==='bracket-view'));
@@ -911,14 +914,11 @@ function buildBracketFromGames(gamesArr, teamMap) {
       if (isReal(away) || !isReal(m.away)) m.away = away;
     }
 
-    // Set winner for finished matches
+    // Set winner for finished matches (accounts for penalty shootouts)
     if (game.finished === 'TRUE') {
-      const hs = parseInt(game.home_score);
-      const as_ = parseInt(game.away_score);
-      if (!isNaN(hs) && !isNaN(as_)) {
-        if (hs > as_) { m.winner = m.home; }
-        else if (as_ > hs) { m.winner = m.away; }
-      }
+      const side = matchWinnerSide(game);
+      if (side === 'home') m.winner = m.home;
+      else if (side === 'away') m.winner = m.away;
       // propagate winner into next round
       if (m.winner) {
         const next = routeNext(slot.round, slot.idx);
@@ -945,6 +945,28 @@ function buildBracketFromGames(gamesArr, teamMap) {
 function flagHtml(flag) {
   return String(flag ?? '⚽');
 }
+// Determines which side won a match, accounting for penalty shootouts.
+// Returns 'home', 'away', or null (still a draw / not finished).
+// Knockout matches can't end level — if regulation/ET is a draw, penalties decide it.
+function matchWinnerSide(game) {
+  const hs = parseInt(game.home_score);
+  const as_ = parseInt(game.away_score);
+  if (isNaN(hs) || isNaN(as_)) return null;
+  if (hs > as_) return 'home';
+  if (as_ > hs) return 'away';
+  // scores level — check penalties
+  const hp = parseInt(game.home_penalty_score);
+  const ap = parseInt(game.away_penalty_score);
+  if (!isNaN(hp) && !isNaN(ap)) {
+    if (hp > ap) return 'home';
+    if (ap > hp) return 'away';
+  }
+  return null; // genuinely undecided (group stage draw, or no penalty data yet)
+}
+function hadPenalties(game) {
+  return !isNaN(parseInt(game.home_penalty_score)) && !isNaN(parseInt(game.away_penalty_score));
+}
+
 function groupById(letter) { return groups.find(g => g.id === letter); }
 function teamAt(letter, pos) { const g = groupById(letter); return g ? g.teams[pos - 1] : null; }
 
@@ -1404,18 +1426,19 @@ function resetBracket() {
   renderBracket();
 }
 function backToGroups() {
-  // if viewing a saved prediction, restore previous state
   const backBtn = document.getElementById('backToGroupsBtn');
   if (backBtn._savedRestore) { backBtn._savedRestore(); }
   document.getElementById('bracket-view').style.display = 'none';
-  document.getElementById('group-stage').style.display = 'block';
   document.getElementById('champion-banner').classList.remove('show');
-  if (!viewingPrediction) {
-    // keep bracketState if it was auto-built from games (so Lock button re-enters it)
-    selectedThird.clear();
-  }
+  if (!viewingPrediction) { selectedThird.clear(); }
   viewingPrediction = false;
-  renderGroups();
+  // if knockout is active, go back to bracket not groups
+  if (bracketState) {
+    switchView('bracket-view');
+  } else {
+    document.getElementById('group-stage').style.display = 'block';
+    renderGroups();
+  }
 }
 
 // ============================================================
@@ -1790,16 +1813,21 @@ function renderScoreCards() {
 
     if (finished) {
       const hs = parseInt(game.home_score), as_ = parseInt(game.away_score);
+      const side = matchWinnerSide(game);
+      const onPens = hadPenalties(game);
       const picks = allScorePicks.filter(p => p.match_id === mid);
-      const realWinner = hs>as_ ? 'home' : (as_>hs ? 'away' : 'draw');
       const correctWinner = [], exact = [];
       picks.forEach(p => {
-        const pw = p.predicted_home>p.predicted_away?'home':(p.predicted_away>p.predicted_home?'away':'draw');
+        const pSide = p.predicted_home>p.predicted_away?'home':(p.predicted_away>p.predicted_home?'away':null);
+        // exact = matched the regulation/FT score line (not the penalty score)
         if (p.predicted_home===hs && p.predicted_away===as_) exact.push(p.profile_name);
-        else if (pw===realWinner) correctWinner.push(p.profile_name);
+        else if (side && pSide===side) correctWinner.push(p.profile_name);
       });
+      const psoNote = onPens
+        ? ` <span style="color:#94a3b8;font-weight:600">(${side==='home'?home.name:away.name} win ${game.home_penalty_score}-${game.away_penalty_score} on pens)</span>`
+        : '';
       inner += `<div class="sp-result">
-          <div class="sp-final">${hs} : ${as_}</div>
+          <div class="sp-final">${hs} : ${as_}${psoNote}</div>
           <div class="sp-reslist"><span class="exact">🎯 Exact (${exact.length}):</span> ${exact.join(', ')||'—'}</div>
           <div class="sp-reslist"><span class="lbl">✅ Winner (${correctWinner.length}):</span> ${correctWinner.join(', ')||'—'}</div>
         </div>`;
@@ -1872,10 +1900,10 @@ async function openLeaderboard() {
     const hs=parseInt(g.home_score), as_=parseInt(g.away_score);
     if (isNaN(hs)||isNaN(as_)) return;
     scores[p.profile_name] = scores[p.profile_name] || 0;
-    const rw = hs>as_?'home':(as_>hs?'away':'draw');
-    const pw = p.predicted_home>p.predicted_away?'home':(p.predicted_away>p.predicted_home?'away':'draw');
+    const side = matchWinnerSide(g);
+    const pSide = p.predicted_home>p.predicted_away?'home':(p.predicted_away>p.predicted_home?'away':null);
     if (p.predicted_home===hs && p.predicted_away===as_) scores[p.profile_name]+=2;
-    else if (pw===rw) scores[p.profile_name]+=1;
+    else if (side && pSide===side) scores[p.profile_name]+=1;
   });
   const ranked = Object.entries(scores).sort((a,b)=>b[1]-a[1]);
   if (ranked.length===0) { wrap.innerHTML='<div class="lb-empty">No points yet — predictions get scored once matches finish.</div>'; return; }
