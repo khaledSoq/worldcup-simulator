@@ -3045,17 +3045,17 @@
       "id": "83",
       "home_team_id": "41",
       "away_team_id": "46",
-      "home_score": "null",
-      "away_score": "null",
-      "home_scorers": "null",
-      "away_scorers": "null",
+      "home_score": "2",
+      "away_score": "1",
+      "home_scorers": "{\"Gvnchalv Ramvs 90+4'\"}",
+      "away_scorers": "{\"Ivan Perišić 53'\"}",
       "group": "R32",
       "matchday": "4",
       "local_date": "07/02/2026 19:00",
       "persian_date": "1405-04-11 19:00",
       "stadium_id": "12",
-      "finished": "FALSE",
-      "time_elapsed": "notstarted",
+      "finished": "TRUE",
+      "time_elapsed": "finished",
       "type": "r32",
       "home_team_label": "Runner-up Group K",
       "away_team_label": "Runner-up Group L",
@@ -3105,17 +3105,17 @@
       "id": "85",
       "home_team_id": "8",
       "away_team_id": "38",
-      "home_score": "null",
-      "away_score": "null",
-      "home_scorers": "null",
+      "home_score": "2",
+      "away_score": "0",
+      "home_scorers": "{\"Breel Embolo 10'\",\"Dn Andvi 46'\"}",
       "away_scorers": "null",
       "group": "R32",
       "matchday": "4",
       "local_date": "07/02/2026 20:00",
       "persian_date": "1405-04-11 20:00",
       "stadium_id": "13",
-      "finished": "FALSE",
-      "time_elapsed": "notstarted",
+      "finished": "TRUE",
+      "time_elapsed": "finished",
       "type": "r32",
       "home_team_label": "Winner Group B",
       "away_team_label": "3rd Group E/F/G/I/J",
@@ -3301,7 +3301,7 @@
     {
       "_id": "679c9c8a5749c4077500e087",
       "id": "93",
-      "home_team_id": "0",
+      "home_team_id": "41",
       "away_team_id": "29",
       "home_score": "0",
       "away_score": "0",
@@ -3317,6 +3317,8 @@
       "type": "r16",
       "home_team_label": "Winner Match 83",
       "away_team_label": "Winner Match 84",
+      "home_team_name_en": "Portugal",
+      "home_team_name_fa": "پرتغال",
       "away_team_name_en": "Spain",
       "away_team_name_fa": "اسپانیا"
     },
@@ -3367,7 +3369,7 @@
     {
       "_id": "679c9c8a5749c4077500e08a",
       "id": "96",
-      "home_team_id": "0",
+      "home_team_id": "8",
       "away_team_id": "0",
       "home_score": "0",
       "away_score": "0",
@@ -3382,7 +3384,9 @@
       "time_elapsed": "notstarted",
       "type": "r16",
       "home_team_label": "Winner Match 85",
-      "away_team_label": "Winner Match 87"
+      "away_team_label": "Winner Match 87",
+      "home_team_name_en": "Switzerland",
+      "home_team_name_fa": "سوئیس"
     },
     {
       "_id": "679c9c8a5749c4077500e08b",
@@ -3545,5 +3549,5 @@
       "away_team_label": "Winner Match 102"
     }
   ],
-  "lastUpdated": "2026-07-03 02:00 AST"
+  "lastUpdated": "2026-07-03 11:49 AST"
 }
